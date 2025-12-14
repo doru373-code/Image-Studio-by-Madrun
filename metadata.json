@@ -1,5 +1,7 @@
 {
   "name": "Image Studio by Madrun",
   "description": "A modern web application for generating artistic images using Gemini 2.5 Flash Image. Users can customize prompts, styles, and aspect ratios.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "microphone"
+  ]
 }

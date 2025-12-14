@@ -1,5 +1,5 @@
-import React from 'react';
-import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect } from 'react';
+import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight, Mic, StopCircle } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode } from '../types';
 import { translations } from '../translations';
 
@@ -48,6 +48,10 @@ export const Controls: React.FC<ControlsProps> = ({
   onAudioSelect,
   onClearAudio
 }) => {
+  const [isRecording, setIsRecording] = useState(false);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const chunksRef = useRef<Blob[]>([]);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2) => {
     if (e.target.files && e.target.files[0]) {
       onReferenceImageSelect(e.target.files[0], slot);
@@ -57,6 +61,42 @@ export const Controls: React.FC<ControlsProps> = ({
   const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       onAudioSelect(e.target.files[0]);
+    }
+  };
+
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaRecorderRef.current = new MediaRecorder(stream);
+      chunksRef.current = [];
+
+      mediaRecorderRef.current.ondataavailable = (e) => {
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
+        }
+      };
+
+      mediaRecorderRef.current.onstop = () => {
+        const blob = new Blob(chunksRef.current, { type: 'audio/mp3' });
+        const file = new File([blob], "recording.mp3", { type: 'audio/mp3' });
+        onAudioSelect(file);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      mediaRecorderRef.current.start();
+      setIsRecording(true);
+    } catch (err) {
+      console.error("Error accessing microphone:", err);
+      alert(t.errorMicPermission);
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -176,31 +216,57 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
       )}
 
-      {/* Audio Upload - Video Mode Only */}
+      {/* Audio Upload/Record - Video Mode Only */}
       {mode === 'video' && (
         <div className="space-y-2">
            <label className="block text-sm font-medium text-slate-300">
              {t.soundtrack}
            </label>
            {!audioFileName ? (
-             <div className="relative">
-               <input
-                 type="file"
-                 id="audio-file"
-                 accept="audio/mp3,audio/mpeg"
-                 className="hidden"
-                 onChange={handleAudioChange}
+             <div className="flex gap-2">
+               {/* Upload MP3 */}
+               <div className="relative flex-1">
+                 <input
+                   type="file"
+                   id="audio-file"
+                   accept="audio/mp3,audio/mpeg"
+                   className="hidden"
+                   onChange={handleAudioChange}
+                   disabled={isGenerating || isRecording}
+                 />
+                 <label
+                   htmlFor="audio-file"
+                   className={`flex items-center justify-center w-full p-3 border border-slate-700 rounded-lg cursor-pointer transition-all ${
+                      isGenerating || isRecording ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'bg-slate-800 hover:bg-slate-750 hover:border-slate-600'
+                   }`}
+                 >
+                   <Music className="w-5 h-5 mr-2 text-purple-400" />
+                   <span className="text-sm text-slate-300">{t.uploadMp3}</span>
+                 </label>
+               </div>
+
+               {/* Record Voice */}
+               <button
+                 onClick={isRecording ? stopRecording : startRecording}
                  disabled={isGenerating}
-               />
-               <label
-                 htmlFor="audio-file"
-                 className={`flex items-center justify-center w-full p-3 border border-slate-700 rounded-lg cursor-pointer transition-all ${
-                    isGenerating ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'bg-slate-800 hover:bg-slate-750 hover:border-slate-600'
-                 }`}
+                 className={`flex items-center justify-center flex-1 p-3 border rounded-lg transition-all ${
+                   isRecording 
+                    ? 'bg-red-900/30 border-red-500/50 text-red-200 animate-pulse' 
+                    : 'bg-slate-800 border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-slate-300'
+                 } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
                >
-                 <Music className="w-5 h-5 mr-2 text-purple-400" />
-                 <span className="text-sm text-slate-300">{t.uploadMp3}</span>
-               </label>
+                 {isRecording ? (
+                   <>
+                    <StopCircle className="w-5 h-5 mr-2 text-red-500" />
+                    <span className="text-sm">{t.stopRecording}</span>
+                   </>
+                 ) : (
+                   <>
+                    <Mic className="w-5 h-5 mr-2 text-indigo-400" />
+                    <span className="text-sm">{t.recordVoice}</span>
+                   </>
+                 )}
+               </button>
              </div>
            ) : (
               <div className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
@@ -216,6 +282,11 @@ export const Controls: React.FC<ControlsProps> = ({
                   <X size={14} />
                 </button>
               </div>
+           )}
+           {isRecording && (
+             <p className="text-xs text-red-400 text-center animate-pulse font-medium">
+               {t.recording}
+             </p>
            )}
         </div>
       )}

@@ -124,11 +124,21 @@ export const generateVideo = async (
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Map resolution: 1K -> 720p, 2K/4K -> 1080p
+    // Determine model and resolution settings
+    // 1K -> Fast Model (720p)
+    // 2K/4K -> Quality Model (1080p)
     const videoResolution = resolution === '1K' ? '720p' : '1080p';
+    const model = resolution === '1K' ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-generate-preview';
+
+    // Veo only supports 16:9 (Landscape) or 9:16 (Portrait). 
+    // We must map other aspect ratios (1:1, 4:3, 3:4) to these supported values.
+    let videoAspectRatio = '16:9';
+    if (aspectRatio === AspectRatio.Tall || aspectRatio === AspectRatio.Portrait) {
+      videoAspectRatio = '9:16';
+    }
 
     let operation = await ai.models.generateVideos({
-      model: 'veo-3.1-fast-generate-preview',
+      model: model,
       prompt: prompt,
       ...(referenceImage ? {
         image: {
@@ -139,7 +149,7 @@ export const generateVideo = async (
       config: {
         numberOfVideos: 1,
         resolution: videoResolution,
-        aspectRatio: aspectRatio,
+        aspectRatio: videoAspectRatio,
       }
     });
 
