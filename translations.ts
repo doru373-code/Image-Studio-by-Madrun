@@ -2,9 +2,9 @@ import { ArtStyle } from './types';
 
 export const translations = {
   en: {
-    appTitle: "NanoBanana Studio",
+    appTitle: "Image Studio by Madrun",
     appDesc: "Create stunning visuals powered by Gemini 2.5 Flash & 3.0 Pro.",
-    eraserTitle: "NanoBanana Eraser",
+    eraserTitle: "Smart Eraser",
     eraserDesc: "Intelligent watermark removal and image cleanup.",
     videoTitle: "Veo Video Studio",
     videoDesc: "Generate cinematic videos from text or images.",
@@ -92,9 +92,9 @@ export const translations = {
     }
   },
   fr: {
-    appTitle: "Studio NanoBanana",
+    appTitle: "Image Studio by Madrun",
     appDesc: "Créez des visuels époustouflants avec Gemini 2.5 Flash & 3.0 Pro.",
-    eraserTitle: "Gomme NanoBanana",
+    eraserTitle: "Gomme Intelligente",
     eraserDesc: "Suppression intelligente des filigranes et nettoyage d'images.",
     videoTitle: "Studio Vidéo Veo",
     videoDesc: "Générez des vidéos cinématiques à partir de texte ou d'images.",
@@ -182,9 +182,9 @@ export const translations = {
     }
   },
   ro: {
-    appTitle: "Studio NanoBanana",
+    appTitle: "Image Studio by Madrun",
     appDesc: "Creați vizualuri uimitoare cu Gemini 2.5 Flash & 3.0 Pro.",
-    eraserTitle: "Radieră NanoBanana",
+    eraserTitle: "Radieră Inteligentă",
     eraserDesc: "Eliminare inteligentă a watermark-urilor și curățare imagine.",
     videoTitle: "Studio Video Veo",
     videoDesc: "Generați videoclipuri cinematice din text sau imagini.",
