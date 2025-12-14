@@ -1,0 +1,5 @@
+{
+  "name": "NanoBanana Studio",
+  "description": "A modern web application for generating artistic images using the NanoBanana model (Gemini 2.5 Flash Image). Users can customize prompts, styles, and aspect ratios.",
+  "requestFramePermissions": []
+}
