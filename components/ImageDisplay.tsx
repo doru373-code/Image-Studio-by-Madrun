@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react';
-import { Download, Maximize2, Play, Pause, Volume2, VolumeX, Scissors } from 'lucide-react';
+import { Download, Maximize2, Scissors } from 'lucide-react';
 import { translations } from '../translations';
 
 interface ImageDisplayProps {
@@ -94,7 +94,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full min-h-[400px] bg-slate-900 rounded-xl overflow-hidden border border-slate-800 shadow-2xl flex items-center justify-center group">
+    <div className="relative w-full h-full min-h-[400px] bg-slate-900 rounded-xl shadow-2xl flex items-center justify-center group overflow-hidden">
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-8">
            <div className="relative w-24 h-24 mb-8">
@@ -110,26 +110,30 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
         </div>
       ) : imageUrl ? (
         <>
-          {isVideo ? (
-            <div className="w-full h-full flex items-center justify-center bg-black">
+          {/* 
+             Content Container with significantly increased padding (p-12 = 48px)
+             to simulate "moving the camera back" and provide more negative space.
+          */}
+          <div className="w-full h-full flex items-center justify-center p-12">
+            {isVideo ? (
               <video 
                 ref={videoRef}
                 src={imageUrl}
-                className="w-full h-full object-contain max-h-[600px]"
+                className="max-w-full max-h-[600px] object-contain"
                 controls
                 autoPlay
                 loop
                 playsInline
               />
-              {audioUrl && <audio ref={audioRef} src={audioUrl} loop />}
-            </div>
-          ) : (
-            <img 
-              src={imageUrl} 
-              alt="Generated Art" 
-              className="w-full h-full object-contain max-h-[600px] bg-black/20"
-            />
-          )}
+            ) : (
+              <img 
+                src={imageUrl} 
+                alt="Generated Art" 
+                className="max-w-full max-h-[600px] object-contain"
+              />
+            )}
+            {isVideo && audioUrl && <audio ref={audioRef} src={audioUrl} loop />}
+          </div>
           
           <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pointer-events-none">
             <div className="flex gap-4 justify-center pointer-events-auto">

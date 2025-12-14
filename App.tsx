@@ -187,7 +187,9 @@ const App: React.FC = () => {
       setImageUrl(resultUrl);
 
     } catch (err: any) {
-      if (err.message && err.message.includes("Requested entity was not found") && window.aistudio) {
+      const errorMessage = err.message || "";
+      // Handle "Requested entity was not found" which usually means the project doesn't have the API enabled or billing set up
+      if (errorMessage.includes("Requested entity was not found") && window.aistudio) {
         try {
           await window.aistudio.openSelectKey();
           setError(t.errorApiKeyUpdate);
@@ -195,7 +197,7 @@ const App: React.FC = () => {
           setError(t.errorApiKeyFail);
         }
       } else {
-        setError(err.message || t.errorGeneric);
+        setError(errorMessage || t.errorGeneric);
       }
     } finally {
       setIsLoading(false);

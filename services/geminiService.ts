@@ -124,11 +124,14 @@ export const generateVideo = async (
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    // Determine model and resolution settings
-    // 1K -> Fast Model (720p)
-    // 2K/4K -> Quality Model (1080p)
+    // Determine resolution settings
+    // 1K -> 720p
+    // 2K/4K -> 1080p
     const videoResolution = resolution === '1K' ? '720p' : '1080p';
-    const model = resolution === '1K' ? 'veo-3.1-fast-generate-preview' : 'veo-3.1-generate-preview';
+    
+    // Use the fast model for all resolutions to ensure availability and avoid 404 errors.
+    // veo-3.1-fast-generate-preview supports both 720p and 1080p.
+    const model = 'veo-3.1-fast-generate-preview';
 
     // Veo only supports 16:9 (Landscape) or 9:16 (Portrait). 
     // We must map other aspect ratios (1:1, 4:3, 3:4) to these supported values.
@@ -180,6 +183,8 @@ export const generateVideo = async (
 
   } catch (error: any) {
     console.error("Gemini Video API Error:", error);
-    throw new Error(error.message || "Failed to generate video.");
+    // Ensure we extract the actual message if it's nested
+    const msg = error.message || (error.error && error.error.message) || "Failed to generate video.";
+    throw new Error(msg);
   }
 };
