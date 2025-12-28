@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Palette, Sparkles, Eraser, Video, Globe, Scissors } from 'lucide-react';
 import { Controls } from './components/Controls';
@@ -18,7 +19,8 @@ const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>('generate');
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
-  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Square);
+  // Fix: AspectRatio.Square does not exist on type 'typeof AspectRatio'. Using AspectRatio.Ratio1_1 instead.
+  const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
   const [resolution, setResolution] = useState<ImageResolution>('1K');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isVideo, setIsVideo] = useState(false);

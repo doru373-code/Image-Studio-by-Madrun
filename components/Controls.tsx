@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
+
+import React, { useState, useRef } from 'react';
 import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight, Mic, StopCircle } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode } from '../types';
 import { translations } from '../translations';
@@ -80,8 +81,6 @@ export const Controls: React.FC<ControlsProps> = ({
         const blob = new Blob(chunksRef.current, { type: 'audio/mp3' });
         const file = new File([blob], "recording.mp3", { type: 'audio/mp3' });
         onAudioSelect(file);
-        
-        // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       };
 
@@ -100,7 +99,6 @@ export const Controls: React.FC<ControlsProps> = ({
     }
   };
 
-  // Helper to render image upload input
   const renderImageUpload = (slot: 1 | 2, preview: string | null, label: string, hint: string) => (
     <div className="flex-1 min-w-0">
       <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
@@ -160,7 +158,6 @@ export const Controls: React.FC<ControlsProps> = ({
   return (
     <div className="space-y-6">
       
-      {/* Mode Switcher */}
       <div className="flex p-1 bg-slate-800 rounded-lg border border-slate-700 shadow-inner overflow-x-auto gap-1">
         <button
           onClick={() => setMode('generate')}
@@ -200,14 +197,12 @@ export const Controls: React.FC<ControlsProps> = ({
         </button>
       </div>
 
-      {/* Reference Image Upload(s) */}
       {mode === 'generate' ? (
         <div className="flex gap-4">
           {renderImageUpload(1, referenceImage1Preview, t.refImage1, t.uploadGenHint)}
           {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
         </div>
       ) : (
-        // Erase, Video, or Remove BG mode - Single upload
         <div className="space-y-2">
              {renderImageUpload(1, referenceImage1Preview, 
                mode === 'erase' ? t.uploadImageRequired : mode === 'remove-bg' ? t.uploadRemoveBgRequired : t.uploadStartingImage,
@@ -216,7 +211,6 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
       )}
 
-      {/* Audio Upload/Record - Video Mode Only */}
       {mode === 'video' && (
         <div className="space-y-2">
            <label className="block text-sm font-medium text-slate-300">
@@ -224,7 +218,6 @@ export const Controls: React.FC<ControlsProps> = ({
            </label>
            {!audioFileName ? (
              <div className="flex gap-2">
-               {/* Upload MP3 */}
                <div className="relative flex-1">
                  <input
                    type="file"
@@ -245,7 +238,6 @@ export const Controls: React.FC<ControlsProps> = ({
                  </label>
                </div>
 
-               {/* Record Voice */}
                <button
                  onClick={isRecording ? stopRecording : startRecording}
                  disabled={isGenerating}
@@ -291,8 +283,7 @@ export const Controls: React.FC<ControlsProps> = ({
         </div>
       )}
 
-      {/* Prompt Input or Active Mode Info */}
-      {mode === 'generate' || mode === 'video' ? (
+      {(mode === 'generate' || mode === 'video') ? (
         <div className="space-y-2">
           <label htmlFor="prompt" className="block text-sm font-medium text-slate-300">
             {mode === 'video' ? t.describeScene : t.describeImagination}
@@ -344,7 +335,6 @@ export const Controls: React.FC<ControlsProps> = ({
       </button>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Style Selector - Only in Generate Mode */}
         {mode === 'generate' && (
           <div className="space-y-2">
             <label htmlFor="style" className="block text-sm font-medium text-slate-300">
@@ -373,7 +363,6 @@ export const Controls: React.FC<ControlsProps> = ({
           </div>
         )}
 
-        {/* Resolution Selector */}
         <div className="space-y-2">
            <label className="block text-sm font-medium text-slate-300">
             {mode === 'video' ? t.videoQuality : t.resolutionQuality}
@@ -396,43 +385,46 @@ export const Controls: React.FC<ControlsProps> = ({
               </button>
             ))}
           </div>
-          <p className="text-[10px] text-slate-500 mt-1">
-            {mode === 'video' 
-              ? (resolution === '1K' ? t.fastGen : t.highQualityVeo)
-              : (resolution === '1K' ? t.fastGen : t.highQualityPro)
-            }
-          </p>
         </div>
 
-        {/* Aspect Ratio Selector */}
-        <div className={`space-y-2 ${mode === 'erase' || mode === 'remove-bg' || (mode === 'video' && mode !== 'generate') ? 'md:col-span-1' : 'md:col-span-2'}`}>
+        <div className="space-y-2 md:col-span-2">
           <label htmlFor="ratio" className="block text-sm font-medium text-slate-300">
             {t.aspectRatio}
           </label>
           <div className="grid grid-cols-5 gap-2">
-            {Object.entries(AspectRatio).map(([key, value]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setAspectRatio(value)}
-                disabled={isGenerating}
-                className={`flex flex-col items-center justify-center p-2 rounded-md border transition-all ${
-                  aspectRatio === value
-                    ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-                }`}
-                title={key}
-              >
-                <div 
-                  className="border border-current rounded-sm mb-1 opacity-80"
-                  style={{
-                    width: '16px',
-                    height: value === '1:1' ? '16px' : value === '3:4' || value === '9:16' ? '24px' : '10px'
-                  }} 
-                />
-                <span className="text-[10px] font-medium">{value}</span>
-              </button>
-            ))}
+            {Object.entries(AspectRatio).map(([key, value]) => {
+              // Calculate representative icon heights based on 16px width
+              let h = '16px';
+              if (value === '1:1') h = '16px';
+              else if (value === '4:5') h = '20px';
+              else if (value === '3:4') h = '21px';
+              else if (value === '16:9') h = '9px';
+              else if (value === '9:16') h = '28px';
+
+              return (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setAspectRatio(value)}
+                  disabled={isGenerating}
+                  className={`flex flex-col items-center justify-center p-2 rounded-md border transition-all h-16 ${
+                    aspectRatio === value
+                      ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400'
+                      : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
+                  }`}
+                  title={value}
+                >
+                  <div 
+                    className="border border-current rounded-sm mb-1 opacity-80"
+                    style={{
+                      width: '16px',
+                      height: h
+                    }} 
+                  />
+                  <span className="text-[10px] font-medium">{value}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </div>

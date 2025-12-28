@@ -1,9 +1,10 @@
+
 export enum AspectRatio {
-  Square = "1:1",
-  Portrait = "3:4",
-  Landscape = "4:3",
-  Tall = "9:16",
-  Wide = "16:9"
+  Ratio1_1 = "1:1",
+  Ratio4_5 = "4:5",
+  Ratio3_4 = "3:4",
+  Ratio16_9 = "16:9",
+  Ratio9_16 = "9:16"
 }
 
 export enum ArtStyle {
@@ -34,7 +35,8 @@ export interface GenerationResult {
 
 declare global {
   interface AIStudio {
-    
+    hasSelectedApiKey: () => Promise<boolean>;
+    openSelectKey: () => Promise<void>;
   }
   
   interface Window {
