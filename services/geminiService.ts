@@ -1,5 +1,5 @@
 
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, VideoGenerationReferenceType } from "@google/genai";
 import { AspectRatio, ImageResolution } from "../types";
 
 export const generateImage = async (
@@ -106,13 +106,15 @@ export const generateVideo = async (
   prompt: string,
   aspectRatio: AspectRatio,
   resolution: ImageResolution,
-  referenceImage?: { data: string; mimeType: string }
+  referenceImages: Array<{ data: string; mimeType: string }> = []
 ): Promise<string> => {
   try {
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     
-    const videoResolution = resolution === '1K' ? '720p' : '1080p';
-    const model = 'veo-3.1-fast-generate-preview';
+    // Character cloning works best with 'veo-3.1-generate-preview'
+    // This model allows up to 3 reference images as ASSETS.
+    const model = 'veo-3.1-generate-preview';
+    const videoResolution = '720p'; // multi-reference assets require 720p
 
     // Veo only supports 16:9 or 9:16
     let videoAspectRatio = '16:9';
@@ -120,24 +122,30 @@ export const generateVideo = async (
       videoAspectRatio = '9:16';
     }
 
+    const referenceImagesPayload: any[] = [];
+    for (const img of referenceImages) {
+      referenceImagesPayload.push({
+        image: {
+          imageBytes: img.data,
+          mimeType: img.mimeType,
+        },
+        referenceType: VideoGenerationReferenceType.ASSET,
+      });
+    }
+
     let operation = await ai.models.generateVideos({
       model: model,
       prompt: prompt,
-      ...(referenceImage ? {
-        image: {
-          imageBytes: referenceImage.data,
-          mimeType: referenceImage.mimeType,
-        }
-      } : {}),
       config: {
         numberOfVideos: 1,
         resolution: videoResolution,
         aspectRatio: videoAspectRatio,
+        referenceImages: referenceImagesPayload.length > 0 ? referenceImagesPayload : undefined,
       }
     });
 
     while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 5000));
+      await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await ai.operations.getVideosOperation({operation: operation});
     }
 

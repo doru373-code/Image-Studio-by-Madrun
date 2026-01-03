@@ -1,6 +1,5 @@
-
 import React, { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight, Mic, StopCircle } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight, Mic, StopCircle, Film } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode } from '../types';
 import { translations } from '../translations';
 
@@ -18,8 +17,12 @@ interface ControlsProps {
   onGenerate: () => void;
   referenceImage1Preview: string | null;
   referenceImage2Preview: string | null;
-  onReferenceImageSelect: (file: File, slot: 1 | 2) => void;
-  onClearReferenceImage: (slot: 1 | 2) => void;
+  referenceImage3Preview: string | null;
+  referenceVideoName: string | null;
+  onReferenceImageSelect: (file: File, slot: 1 | 2 | 3) => void;
+  onClearReferenceImage: (slot: 1 | 2 | 3) => void;
+  onReferenceVideoSelect: (file: File) => void;
+  onClearReferenceVideo: () => void;
   mode: AppMode;
   setMode: (mode: AppMode) => void;
   audioFileName: string | null;
@@ -41,8 +44,12 @@ export const Controls: React.FC<ControlsProps> = ({
   onGenerate,
   referenceImage1Preview,
   referenceImage2Preview,
+  referenceImage3Preview,
+  referenceVideoName,
   onReferenceImageSelect,
   onClearReferenceImage,
+  onReferenceVideoSelect,
+  onClearReferenceVideo,
   mode,
   setMode,
   audioFileName,
@@ -53,9 +60,15 @@ export const Controls: React.FC<ControlsProps> = ({
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2 | 3) => {
     if (e.target.files && e.target.files[0]) {
       onReferenceImageSelect(e.target.files[0], slot);
+    }
+  };
+
+  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      onReferenceVideoSelect(e.target.files[0]);
     }
   };
 
@@ -99,14 +112,14 @@ export const Controls: React.FC<ControlsProps> = ({
     }
   };
 
-  const renderImageUpload = (slot: 1 | 2, preview: string | null, label: string, hint: string) => (
+  const renderImageUpload = (slot: 1 | 2 | 3, preview: string | null, label: string, hint: string) => (
     <div className="flex-1 min-w-0">
       <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
          {label}
       </label>
       
       {!preview ? (
-        <div className="relative h-32">
+        <div className="relative h-28 md:h-32">
           <input
             type="file"
             id={`ref-image-${slot}`}
@@ -122,15 +135,15 @@ export const Controls: React.FC<ControlsProps> = ({
             }`}
           >
             <div className="flex flex-col items-center justify-center pt-2 pb-2 text-center px-2">
-              <Upload className="w-6 h-6 mb-2 text-slate-400" />
-              <p className="text-xs text-slate-500 line-clamp-2">
+              <Upload className="w-5 h-5 mb-1 text-slate-400" />
+              <p className="text-[10px] text-slate-500 line-clamp-2">
                 {hint}
               </p>
             </div>
           </label>
         </div>
       ) : (
-        <div className="relative h-32 group rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
+        <div className="relative h-28 md:h-32 group rounded-lg overflow-hidden border border-slate-700 bg-slate-800">
           <img 
             src={preview} 
             alt={`Reference ${slot}`} 
@@ -139,13 +152,13 @@ export const Controls: React.FC<ControlsProps> = ({
           <button
             onClick={() => onClearReferenceImage(slot)}
             disabled={isGenerating}
-            className="absolute top-2 right-2 p-1.5 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors shadow-lg"
+            className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors shadow-lg"
             title={t.removeImage}
           >
-            <X size={14} />
+            <X size={12} />
           </button>
-          <div className="absolute bottom-0 left-0 right-0 p-1.5 bg-gradient-to-t from-black/90 to-transparent">
-            <span className="text-[10px] text-slate-200 font-medium flex items-center gap-1.5">
+          <div className="absolute bottom-0 left-0 right-0 p-1 bg-gradient-to-t from-black/90 to-transparent">
+            <span className="text-[8px] md:text-[10px] text-slate-200 font-medium flex items-center gap-1">
               <ImageIcon size={10} className="text-indigo-400" /> 
               {mode === 'erase' ? t.sourceImage : t.referenceActive}
             </span>
@@ -197,84 +210,147 @@ export const Controls: React.FC<ControlsProps> = ({
         </button>
       </div>
 
-      {mode === 'generate' ? (
-        <div className="flex gap-4">
-          {renderImageUpload(1, referenceImage1Preview, t.refImage1, t.uploadGenHint)}
-          {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
-        </div>
-      ) : (
-        <div className="space-y-2">
+      <div className="flex gap-2 md:gap-4 overflow-x-auto pb-2 scrollbar-thin">
+        {mode === 'generate' && (
+          <>
+            {renderImageUpload(1, referenceImage1Preview, t.refImage1, t.uploadGenHint)}
+            {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
+          </>
+        )}
+        {mode === 'video' && (
+          <div className="w-full flex gap-2">
+            {!referenceVideoName ? (
+              <div className="flex-1 min-w-0">
+                <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
+                  {t.refVideo}
+                </label>
+                <div className="relative h-28 md:h-32">
+                  <input
+                    type="file"
+                    id="ref-video"
+                    accept="video/mp4,video/webm,video/ogg"
+                    className="hidden"
+                    onChange={handleVideoChange}
+                    disabled={isGenerating}
+                  />
+                  <label
+                    htmlFor="ref-video"
+                    className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg cursor-pointer transition-all ${
+                       isGenerating ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-800' : 'border-slate-600 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500'
+                    }`}
+                  >
+                    <div className="flex flex-col items-center justify-center pt-2 pb-2 text-center px-2">
+                      <Film className="w-5 h-5 mb-1 text-purple-400" />
+                      <p className="text-[10px] text-slate-500 line-clamp-2">
+                        {t.uploadVideoRefHint}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            ) : (
+              <div className="flex-1 min-w-0">
+                 <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
+                  {t.refVideo}
+                </label>
+                <div className="relative h-28 md:h-32 flex items-center justify-center bg-slate-800 rounded-lg border border-purple-500/30 overflow-hidden group">
+                   <Video className="w-8 h-8 text-purple-500/50" />
+                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <span className="text-[10px] text-white font-medium truncate px-2">{referenceVideoName}</span>
+                   </div>
+                   <button
+                    onClick={onClearReferenceVideo}
+                    disabled={isGenerating}
+                    className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors shadow-lg z-10"
+                    title={t.removeVideo}
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="flex-[2] flex gap-2">
+              {renderImageUpload(1, referenceImage1Preview, "Asset 1", "Face")}
+              {renderImageUpload(2, referenceImage2Preview, "Asset 2", "Profile")}
+            </div>
+          </div>
+        )}
+        {(mode === 'erase' || mode === 'remove-bg') && (
+          <div className="w-full">
              {renderImageUpload(1, referenceImage1Preview, 
-               mode === 'erase' ? t.uploadImageRequired : mode === 'remove-bg' ? t.uploadRemoveBgRequired : t.uploadStartingImage,
-               mode === 'erase' ? t.uploadEraserHint : mode === 'remove-bg' ? t.uploadRemoveBgHint : t.uploadVideoHint
+               mode === 'erase' ? t.uploadImageRequired : t.uploadRemoveBgRequired,
+               mode === 'erase' ? t.uploadEraserHint : t.uploadRemoveBgHint
              )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
 
       {mode === 'video' && (
         <div className="space-y-2">
            <label className="block text-sm font-medium text-slate-300">
              {t.soundtrack}
            </label>
-           {!audioFileName ? (
-             <div className="flex gap-2">
-               <div className="relative flex-1">
-                 <input
-                   type="file"
-                   id="audio-file"
-                   accept="audio/mp3,audio/mpeg"
-                   className="hidden"
-                   onChange={handleAudioChange}
-                   disabled={isGenerating || isRecording}
-                 />
-                 <label
-                   htmlFor="audio-file"
-                   className={`flex items-center justify-center w-full p-3 border border-slate-700 rounded-lg cursor-pointer transition-all ${
-                      isGenerating || isRecording ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'bg-slate-800 hover:bg-slate-750 hover:border-slate-600'
-                   }`}
-                 >
-                   <Music className="w-5 h-5 mr-2 text-purple-400" />
-                   <span className="text-sm text-slate-300">{t.uploadMp3}</span>
-                 </label>
-               </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+             {!audioFileName ? (
+               <>
+                 <div className="relative">
+                   <input
+                     type="file"
+                     id="audio-file"
+                     accept="audio/mp3,audio/mpeg"
+                     className="hidden"
+                     onChange={handleAudioChange}
+                     disabled={isGenerating || isRecording}
+                   />
+                   <label
+                     htmlFor="audio-file"
+                     className={`flex items-center justify-center w-full p-3 border border-slate-700 rounded-lg cursor-pointer transition-all ${
+                        isGenerating || isRecording ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'bg-slate-800 hover:bg-slate-750 hover:border-slate-600'
+                     }`}
+                   >
+                     <Music className="w-5 h-5 mr-2 text-purple-400" />
+                     <span className="text-sm text-slate-300">{t.uploadMp3}</span>
+                   </label>
+                 </div>
 
-               <button
-                 onClick={isRecording ? stopRecording : startRecording}
-                 disabled={isGenerating}
-                 className={`flex items-center justify-center flex-1 p-3 border rounded-lg transition-all ${
-                   isRecording 
-                    ? 'bg-red-900/30 border-red-500/50 text-red-200 animate-pulse' 
-                    : 'bg-slate-800 border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-slate-300'
-                 } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-               >
-                 {isRecording ? (
-                   <>
-                    <StopCircle className="w-5 h-5 mr-2 text-red-500" />
-                    <span className="text-sm">{t.stopRecording}</span>
-                   </>
-                 ) : (
-                   <>
-                    <Mic className="w-5 h-5 mr-2 text-indigo-400" />
-                    <span className="text-sm">{t.recordVoice}</span>
-                   </>
-                 )}
-               </button>
-             </div>
-           ) : (
-              <div className="flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                <div className="flex items-center gap-2 overflow-hidden">
-                   <Music className="w-4 h-4 text-purple-400 shrink-0" />
-                   <span className="text-sm text-purple-200 truncate">{audioFileName}</span>
+                 <button
+                   onClick={isRecording ? stopRecording : startRecording}
+                   disabled={isGenerating}
+                   className={`flex items-center justify-center p-3 border rounded-lg transition-all ${
+                     isRecording 
+                      ? 'bg-red-900/30 border-red-500/50 text-red-200 animate-pulse' 
+                      : 'bg-slate-800 border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-slate-300'
+                   } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+                 >
+                   {isRecording ? (
+                     <>
+                      <StopCircle className="w-5 h-5 mr-2 text-red-500" />
+                      <span className="text-sm">{t.stopRecording}</span>
+                     </>
+                   ) : (
+                     <>
+                      <Mic className="w-5 h-5 mr-2 text-indigo-400" />
+                      <span className="text-sm">{t.recordVoice}</span>
+                     </>
+                   )}
+                 </button>
+               </>
+             ) : (
+                <div className="col-span-2 flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
+                  <div className="flex items-center gap-2 overflow-hidden">
+                     <Music className="w-4 h-4 text-purple-400 shrink-0" />
+                     <span className="text-sm text-purple-200 truncate">{audioFileName}</span>
+                  </div>
+                  <button 
+                    onClick={onClearAudio}
+                    disabled={isGenerating}
+                    className="p-1 hover:bg-purple-800/50 rounded-full text-purple-300 transition-colors"
+                  >
+                    <X size={14} />
+                  </button>
                 </div>
-                <button 
-                  onClick={onClearAudio}
-                  disabled={isGenerating}
-                  className="p-1 hover:bg-purple-800/50 rounded-full text-purple-300 transition-colors"
-                >
-                  <X size={14} />
-                </button>
-              </div>
-           )}
+             )}
+           </div>
            {isRecording && (
              <p className="text-xs text-red-400 text-center animate-pulse font-medium">
                {t.recording}

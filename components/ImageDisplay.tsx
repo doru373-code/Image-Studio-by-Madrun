@@ -1,5 +1,5 @@
-import React, { useRef, useEffect } from 'react';
-import { Download, Maximize2, Scissors } from 'lucide-react';
+import React, { useRef, useEffect, useState } from 'react';
+import { Download, Maximize2, Scissors, Edit3, Save, X, RotateCcw, Sliders } from 'lucide-react';
 import { translations } from '../translations';
 
 interface ImageDisplayProps {
@@ -10,7 +10,24 @@ interface ImageDisplayProps {
   isVideo?: boolean;
   audioUrl?: string | null;
   onRemoveBackground?: () => void;
+  onUpdateImage?: (newUrl: string) => void;
 }
+
+interface EditSettings {
+  brightness: number;
+  contrast: number;
+  grayscale: number;
+  sepia: number;
+  invert: number;
+}
+
+const DEFAULT_SETTINGS: EditSettings = {
+  brightness: 100,
+  contrast: 100,
+  grayscale: 0,
+  sepia: 0,
+  invert: 0
+};
 
 export const ImageDisplay: React.FC<ImageDisplayProps> = ({ 
   t, 
@@ -19,10 +36,16 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   error, 
   isVideo = false, 
   audioUrl,
-  onRemoveBackground 
+  onRemoveBackground,
+  onUpdateImage
 }) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imgRef = useRef<HTMLImageElement>(null);
+
+  const [isEditing, setIsEditing] = useState(false);
+  const [editSettings, setEditSettings] = useState<EditSettings>(DEFAULT_SETTINGS);
 
   // Sync Audio with Video
   useEffect(() => {
@@ -33,12 +56,12 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
       const onPlay = () => audio.play().catch(() => {});
       const onPause = () => audio.pause();
       const onSeek = () => { audio.currentTime = video.currentTime; };
-      const onEnded = () => { audio.currentTime = 0; audio.play().catch(() => {}); }; // Loop sync
+      const onEnded = () => { audio.currentTime = 0; audio.play().catch(() => {}); }; 
 
       video.addEventListener('play', onPlay);
       video.addEventListener('pause', onPause);
       video.addEventListener('seeking', onSeek);
-      video.addEventListener('ended', onEnded); // Simple loop handling
+      video.addEventListener('ended', onEnded); 
 
       return () => {
         video.removeEventListener('play', onPlay);
@@ -79,6 +102,35 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
     }
   };
 
+  const applyEdits = () => {
+    if (!canvasRef.current || !imgRef.current || !onUpdateImage) return;
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    const img = imgRef.current;
+
+    if (!ctx) return;
+
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+
+    // Build filter string
+    const filter = `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)`;
+    ctx.filter = filter;
+    ctx.drawImage(img, 0, 0);
+
+    const newUrl = canvas.toDataURL('image/png');
+    onUpdateImage(newUrl);
+    setIsEditing(false);
+  };
+
+  const resetEdits = () => {
+    setEditSettings(DEFAULT_SETTINGS);
+  };
+
+  const getFilterString = () => {
+    return `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)`;
+  };
+
   if (error) {
     return (
       <div className="w-full h-full min-h-[400px] flex items-center justify-center bg-red-900/10 border border-red-900/30 rounded-xl p-6">
@@ -94,7 +146,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   }
 
   return (
-    <div className="relative w-full h-full min-h-[400px] bg-slate-900 rounded-xl shadow-2xl flex items-center justify-center group overflow-hidden">
+    <div className="relative w-full h-full min-h-[400px] bg-slate-900 rounded-xl shadow-2xl flex flex-col items-center justify-center group overflow-hidden">
       {isLoading ? (
         <div className="flex flex-col items-center justify-center p-8">
            <div className="relative w-24 h-24 mb-8">
@@ -110,11 +162,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
         </div>
       ) : imageUrl ? (
         <>
-          {/* 
-             Content Container with significantly increased padding (p-12 = 48px)
-             to simulate "moving the camera back" and provide more negative space.
-          */}
-          <div className="w-full h-full flex items-center justify-center p-12">
+          <div className="w-full flex-1 flex items-center justify-center p-12 overflow-hidden">
             {isVideo ? (
               <video 
                 ref={videoRef}
@@ -127,44 +175,151 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
               />
             ) : (
               <img 
+                ref={imgRef}
                 src={imageUrl} 
                 alt="Generated Art" 
-                className="max-w-full max-h-[600px] object-contain"
+                className="max-w-full max-h-[600px] object-contain transition-all duration-200"
+                style={{ filter: isEditing ? getFilterString() : 'none' }}
+                crossOrigin="anonymous"
               />
             )}
             {isVideo && audioUrl && <audio ref={audioRef} src={audioUrl} loop />}
+            <canvas ref={canvasRef} className="hidden" />
           </div>
           
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pointer-events-none">
-            <div className="flex gap-4 justify-center pointer-events-auto">
-              <button 
-                onClick={handleDownload}
-                className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
-                title={t.download}
-              >
-                <Download size={18} />
-                <span className="hidden sm:inline">{t.download}</span>
-              </button>
-              <button 
-                 onClick={handleFullSize}
-                 className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
-                 title={t.fullSize}
-              >
-                <Maximize2 size={18} />
-                <span className="hidden sm:inline">{t.fullSize}</span>
-              </button>
-              {!isVideo && onRemoveBackground && (
+          {/* Main Action Bar */}
+          {!isEditing && (
+            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6 pointer-events-none">
+              <div className="flex flex-wrap gap-2 justify-center pointer-events-auto">
                 <button 
-                  onClick={onRemoveBackground}
+                  onClick={handleDownload}
                   className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
-                  title={t.removeBackground}
+                  title={t.download}
                 >
-                  <Scissors size={18} />
-                  <span className="hidden sm:inline">{t.modeRemoveBg}</span>
+                  <Download size={18} />
+                  <span className="hidden sm:inline">{t.download}</span>
                 </button>
-              )}
+                <button 
+                  onClick={handleFullSize}
+                  className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
+                  title={t.fullSize}
+                >
+                  <Maximize2 size={18} />
+                  <span className="hidden sm:inline">{t.fullSize}</span>
+                </button>
+                {!isVideo && (
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
+                    title={t.edit}
+                  >
+                    <Edit3 size={18} />
+                    <span className="hidden sm:inline">{t.edit}</span>
+                  </button>
+                )}
+                {!isVideo && onRemoveBackground && (
+                  <button 
+                    onClick={onRemoveBackground}
+                    className="flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-lg text-white font-medium transition-colors border border-white/20"
+                    title={t.removeBackground}
+                  >
+                    <Scissors size={18} />
+                    <span className="hidden sm:inline">{t.modeRemoveBg}</span>
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
+          )}
+
+          {/* Edit Toolbar */}
+          {isEditing && (
+            <div className="w-full bg-slate-900/95 border-t border-slate-800 p-6 animate-in slide-in-from-bottom-4 duration-300">
+              <div className="max-w-4xl mx-auto space-y-6">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-white font-semibold flex items-center gap-2">
+                    <Sliders size={18} className="text-indigo-400" />
+                    {t.edit}
+                  </h3>
+                  <div className="flex gap-2">
+                    <button 
+                      onClick={resetEdits}
+                      className="p-2 text-slate-400 hover:text-white transition-colors"
+                      title={t.reset}
+                    >
+                      <RotateCcw size={18} />
+                    </button>
+                    <button 
+                      onClick={() => setIsEditing(false)}
+                      className="p-2 text-slate-400 hover:text-red-400 transition-colors"
+                      title={t.cancel}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                  {/* Brightness */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>{t.brightness}</span>
+                      <span>{editSettings.brightness}%</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="200" step="1"
+                      value={editSettings.brightness}
+                      onChange={(e) => setEditSettings({...editSettings, brightness: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                  </div>
+
+                  {/* Contrast */}
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-xs text-slate-400">
+                      <span>{t.contrast}</span>
+                      <span>{editSettings.contrast}%</span>
+                    </div>
+                    <input 
+                      type="range" min="0" max="200" step="1"
+                      value={editSettings.contrast}
+                      onChange={(e) => setEditSettings({...editSettings, contrast: parseInt(e.target.value)})}
+                      className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Filter Presets / Toggles */}
+                <div className="flex flex-wrap gap-3">
+                  <button 
+                    onClick={() => setEditSettings({...editSettings, grayscale: editSettings.grayscale === 100 ? 0 : 100})}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${editSettings.grayscale === 100 ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+                  >
+                    {t.grayscale}
+                  </button>
+                  <button 
+                    onClick={() => setEditSettings({...editSettings, sepia: editSettings.sepia === 100 ? 0 : 100})}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${editSettings.sepia === 100 ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+                  >
+                    {t.sepia}
+                  </button>
+                  <button 
+                    onClick={() => setEditSettings({...editSettings, invert: editSettings.invert === 100 ? 0 : 100})}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${editSettings.invert === 100 ? 'bg-indigo-600 border-indigo-500 text-white' : 'bg-slate-800 border-slate-700 text-slate-400'}`}
+                  >
+                    {t.invert}
+                  </button>
+                </div>
+
+                <button 
+                  onClick={applyEdits}
+                  className="w-full flex items-center justify-center gap-2 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-all shadow-lg shadow-indigo-500/20"
+                >
+                  <Save size={18} />
+                  {t.save}
+                </button>
+              </div>
+            </div>
+          )}
         </>
       ) : (
         <div className="text-center p-8 text-slate-600">
