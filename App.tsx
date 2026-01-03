@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Palette, Sparkles, Eraser, Video, Globe, Scissors, CreditCard, ShieldCheck, LogOut, LayoutDashboard } from 'lucide-react';
 import { Controls } from './components/Controls';
@@ -70,7 +71,12 @@ const App: React.FC = () => {
     if (savedUser) {
       const parsedUser = JSON.parse(savedUser);
       setUser(parsedUser);
-      if (parsedUser.isAdmin) {
+      
+      // Check for saved subscription for this user
+      const savedSub = localStorage.getItem(`sub-${parsedUser.email}`);
+      if (savedSub) {
+        setSubscription(savedSub as SubscriptionStatus);
+      } else if (parsedUser.isAdmin) {
         setSubscription('pro');
       }
     }
@@ -105,8 +111,13 @@ const App: React.FC = () => {
     setUser(userData);
     localStorage.setItem('image-studio-user', JSON.stringify(userData));
     
-    if (isAdmin) {
+    const savedSub = localStorage.getItem(`sub-${email}`);
+    if (savedSub) {
+      setSubscription(savedSub as SubscriptionStatus);
+    } else if (isAdmin) {
       setSubscription('pro');
+    } else {
+      setSubscription('free');
     }
   };
 
@@ -118,7 +129,14 @@ const App: React.FC = () => {
   };
 
   const handleUpdateUserSubscription = (userId: string, status: SubscriptionStatus) => {
-    setUsers(users.map(u => u.id === userId ? { ...u, subscription: status } : u));
+    const updatedUsers = users.map(u => {
+      if (u.id === userId) {
+        localStorage.setItem(`sub-${u.email}`, status);
+        return { ...u, subscription: status };
+      }
+      return u;
+    });
+    setUsers(updatedUsers);
   };
 
   const handleReferenceImageSelect = (file: File, slot: 1 | 2 | 3) => {
@@ -188,6 +206,9 @@ const App: React.FC = () => {
 
   const handleSubscribe = (plan: 'pro' | 'trial') => {
     setSubscription(plan);
+    if (user) {
+      localStorage.setItem(`sub-${user.email}`, plan);
+    }
     setShowPricing(false);
   };
 
@@ -498,6 +519,7 @@ const App: React.FC = () => {
       {showPricing && (
         <Pricing 
           t={t} 
+          userEmail={user.email}
           currentPlan={subscription}
           onClose={() => setShowPricing(false)}
           onSubscribe={handleSubscribe}
