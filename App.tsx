@@ -1,241 +1,268 @@
 
-import React, { useState, useCallback } from 'react';
-import { Palette, Sparkles, Image as ImageIcon, Zap, Key, RefreshCcw, Download, Maximize2, X, Upload } from 'lucide-react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
+// Added RefreshCcw to imports
+import { Palette, Key, Languages, Github, Info, ShieldCheck, Sparkles, Wand2, RefreshCcw } from 'lucide-react';
 import { generateImage } from './services/geminiService';
-import { AspectRatio, ArtStyle, ImageResolution } from './types';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution } from './types';
 import { translations } from './translations';
-import { Button } from './components/Button';
+import { Controls } from './components/Controls';
+import { ImageDisplay } from './components/ImageDisplay';
+import { Login } from './components/Login';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
-  [ArtStyle.Photorealistic]: "ultra-realistic professional photography, 8k UHD, cinematic lighting",
-  [ArtStyle.Cinematic]: "cinematic movie still, dramatic lighting",
-  [ArtStyle.Surreal]: "surrealist masterpiece, dreamlike atmosphere",
-  [ArtStyle.Watercolor]: "soft watercolor painting",
-  [ArtStyle.Moebius]: "Jean Giraud Moebius style, clean lines",
-  [ArtStyle.HyperRealistic]: "hyper-realistic digital art, extreme detail",
-  [ArtStyle.Cyberpunk]: "cyberpunk aesthetic, neon lights",
-  [ArtStyle.OilPainting]: "classical oil painting on canvas",
-  [ArtStyle.Anime]: "high-quality modern anime style",
-  [ArtStyle.PixelArt]: "retro 16-bit pixel art",
-  [ArtStyle.Minimalist]: "minimalist flat design",
-  [ArtStyle.Pexar]: "3D CGI ANIMATED CHARACTER, Disney Pixar style"
+  [ArtStyle.Photorealistic]: "ultra-realistic professional photography, 8k UHD, cinematic lighting, sharp focus",
+  [ArtStyle.Cinematic]: "cinematic movie still, dramatic lighting, highly detailed, film grain",
+  [ArtStyle.Surreal]: "surrealist masterpiece, dreamlike atmosphere, abstract elements, artistic",
+  [ArtStyle.Watercolor]: "soft watercolor painting, artistic brush strokes, paper texture",
+  [ArtStyle.Moebius]: "Jean Giraud Moebius style, clean lines, flat colors, science fiction aesthetic",
+  [ArtStyle.HyperRealistic]: "hyper-realistic digital art, extreme detail, 8k resolution, photorealistic",
+  [ArtStyle.Cyberpunk]: "cyberpunk aesthetic, neon lights, rainy street, futuristic atmosphere",
+  [ArtStyle.OilPainting]: "classical oil painting on canvas, thick paint, masterpiece",
+  [ArtStyle.Anime]: "high-quality modern anime style, clean lines, vibrant colors",
+  [ArtStyle.PixelArt]: "retro 16-bit pixel art, detailed sprites, classic game aesthetic",
+  [ArtStyle.Minimalist]: "minimalist flat design, clean lines, simple shapes",
+  [ArtStyle.Pexar]: "3D CGI ANIMATED CHARACTER, Disney Pixar style, soft lighting, expressive",
+  [ArtStyle.Cartoon]: "vibrant cartoon illustration, bold clean outlines, expressive character design, cell shaded, high quality 2d animation style"
 };
 
 const App: React.FC = () => {
+  const [lang, setLang] = useState<Language>('ro');
+  const [mode, setMode] = useState<AppMode>('generate');
+  const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('studio-user-email'));
+  
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
+  const [resolution, setResolution] = useState<ImageResolution>("1K");
+  
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [refImage, setRefImage] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
-  const t = translations.ro;
+  const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
+  const [refImage2, setRefImage2] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
-        const matches = result.match(/^data:(.+);base64,(.+)$/);
-        if (matches) {
-          setRefImage({ mimeType: matches[1], data: matches[2], preview: result });
-        }
-      };
-      reader.readAsDataURL(file);
-    }
+  const t = useMemo(() => translations[lang], [lang]);
+
+  const handleLogin = (email: string) => {
+    setUserEmail(email);
+    localStorage.setItem('studio-user-email', email);
   };
 
-  const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() && !refImage) {
-      setError("Introdu un text sau încarcă o imagine.");
-      return;
-    }
+  const handleLogout = () => {
+    setUserEmail(null);
+    localStorage.removeItem('studio-user-email');
+  };
 
-    setIsLoading(true);
-    setError(null);
-    setImageUrl(null);
-
-    try {
-      const finalPrompt = style !== ArtStyle.None ? `${prompt}. Style: ${STYLE_PROMPTS[style]}` : prompt;
-      
-      const resultUrl = await generateImage(
-        finalPrompt, 
-        aspectRatio, 
-        "1K", 
-        refImage ? { data: refImage.data, mimeType: refImage.mimeType } : undefined
-      );
-      
-      setImageUrl(resultUrl);
-    } catch (err: any) {
-      if (err.message.includes("403")) {
-        setError("Eroare 403: Acces Refuzat. Modelul NanoBanana Pro necesită o cheie API proprie dintr-un proiect Google Cloud cu facturare activă.");
-      } else {
-        setError(err.message || "A apărut o eroare la generare.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, [prompt, refImage, style, aspectRatio]);
-
-  const openApiKeyDialog = async () => {
+  const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
       setError(null);
     }
   };
 
+  const onReferenceImageSelect = (file: File, slot: 1 | 2 | 3) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const matches = result.match(/^data:(.+);base64,(.+)$/);
+      if (matches) {
+        const payload = { mimeType: matches[1], data: matches[2], preview: result };
+        if (slot === 1) setRefImage1(payload);
+        else if (slot === 2) setRefImage2(payload);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGenerate = useCallback(async () => {
+    if (mode === 'generate' && !prompt.trim() && !refImage1) {
+      setError(t.promptPlaceholder);
+      return;
+    }
+    if ((mode === 'remove-bg' || mode === 'erase') && !refImage1) {
+      setError(t.uploadImageRequired);
+      return;
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      let finalPrompt = "";
+      if (mode === 'remove-bg') {
+        finalPrompt = "Professional background removal. Extract the main subject and place it on a pure, solid white studio background. High contrast, clean edges, isolated subject.";
+      } else if (mode === 'erase') {
+        finalPrompt = `Modify the image to: ${prompt}. Professional editing, seamless integration.`;
+      } else {
+        const stylePrefix = STYLE_PROMPTS[style] ? `${STYLE_PROMPTS[style]}, ` : "";
+        finalPrompt = `${stylePrefix}${prompt}`;
+      }
+
+      // We only support refImage1 for now in this refined setup as primary source
+      const resultUrl = await generateImage(
+        finalPrompt,
+        aspectRatio,
+        resolution,
+        refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined
+      );
+      setImageUrl(resultUrl);
+    } catch (err: any) {
+      console.error(err);
+      if (err.message.includes("403") || err.message.includes("permission")) {
+        setError(t.errorAuth);
+      } else {
+        setError(err.message || t.errorGeneric);
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, [prompt, refImage1, style, aspectRatio, resolution, mode, t]);
+
+  if (!userEmail) {
+    return <Login t={t} onLogin={handleLogin} />;
+  }
+
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
-      {/* Header */}
-      <nav className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="bg-indigo-600 p-1.5 rounded-lg">
-              <Palette size={20} className="text-white" />
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30">
+      {/* Navigation */}
+      <nav className="border-b border-white/5 bg-slate-900/40 backdrop-blur-xl sticky top-0 z-50">
+        <div className="max-w-[1440px] mx-auto px-6 h-20 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+              <Palette size={26} className="text-white" />
             </div>
-            <span className="font-bold tracking-tight">Studio NanoBanana</span>
+            <div className="hidden sm:block">
+              <h1 className="text-xl font-black tracking-tighter leading-none">{t.appTitle}</h1>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-[0.2em] mt-1 block">Madrun AI Studio v2.5</span>
+            </div>
           </div>
           
-          <button 
-            onClick={openApiKeyDialog}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-xs font-bold transition-all"
-          >
-            <Key size={14} className="text-amber-400" />
-            CONFIGUREAZĂ CHEIE API
-          </button>
+          <div className="flex items-center gap-4 sm:gap-8">
+            {/* Language Selection */}
+            <div className="flex items-center gap-1 bg-slate-800/50 p-1 rounded-full border border-white/5">
+              {(['en', 'fr', 'ro'] as Language[]).map((l) => (
+                <button
+                  key={l}
+                  onClick={() => setLang(l)}
+                  className={`px-3 py-1.5 text-[10px] font-black rounded-full transition-all ${lang === l ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-200'}`}
+                >
+                  {l.toUpperCase()}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-3">
+               <button 
+                onClick={handleApiKeyFix}
+                className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800/80 hover:bg-slate-700 border border-white/10 rounded-xl text-[10px] font-bold transition-all"
+                title={t.apiKeyBtn}
+              >
+                <Key size={14} className="text-amber-400" />
+                <span>{t.apiKeyBtn}</span>
+              </button>
+              <button 
+                onClick={handleLogout}
+                className="px-4 py-2 text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors"
+              >
+                Sign Out
+              </button>
+            </div>
+          </div>
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-6 lg:p-10">
-        <div className="grid lg:grid-cols-12 gap-10">
-          
-          {/* Controls */}
-          <div className="lg:col-span-4 space-y-8">
-            <section className="space-y-4">
-              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Imagine de Referință</label>
-              {!refImage ? (
-                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-800 rounded-2xl cursor-pointer hover:bg-slate-900/50 hover:border-indigo-500/50 transition-all group">
-                  <Upload className="text-slate-600 group-hover:text-indigo-400 mb-2" />
-                  <span className="text-xs text-slate-500">Încarcă o poză (opțional)</span>
-                  <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
-                </label>
-              ) : (
-                <div className="relative rounded-2xl overflow-hidden border border-slate-700 h-32">
-                  <img src={refImage.preview} className="w-full h-full object-cover" alt="Preview" />
-                  <button 
-                    onClick={() => setRefImage(null)}
-                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500 rounded-full text-white backdrop-blur-sm transition-all"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )}
-            </section>
+      <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 lg:p-10 grid lg:grid-cols-12 gap-10">
+        {/* Controls Column */}
+        <div className="lg:col-span-4 space-y-10 animate-in slide-in-from-left duration-700">
+          <Controls 
+            t={t}
+            prompt={prompt}
+            setPrompt={setPrompt}
+            style={style}
+            setStyle={setStyle}
+            aspectRatio={aspectRatio}
+            setAspectRatio={setAspectRatio}
+            resolution={resolution}
+            setResolution={setResolution}
+            isGenerating={isLoading}
+            onGenerate={handleGenerate}
+            referenceImage1Preview={refImage1?.preview || null}
+            referenceImage2Preview={refImage2?.preview || null}
+            referenceImage3Preview={null}
+            referenceVideoName={null}
+            onReferenceImageSelect={onReferenceImageSelect}
+            onClearReferenceImage={(slot) => slot === 1 ? setRefImage1(null) : setRefImage2(null)}
+            onReferenceVideoSelect={() => {}}
+            onClearReferenceVideo={() => {}}
+            mode={mode}
+            setMode={setMode}
+            audioFileName={null}
+            onAudioSelect={() => {}}
+            onClearAudio={() => {}}
+          />
 
-            <section className="space-y-4">
-              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Descriere Proiect</label>
-              <textarea 
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ex: Un portret cinematic al unui astronaut în stil cyberpunk..."
-                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[120px] transition-all"
-              />
-            </section>
-
-            <div className="grid grid-cols-2 gap-4">
-              <section className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Stil Artistic</label>
-                <select 
-                  value={style}
-                  onChange={(e) => setStyle(e.target.value as ArtStyle)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs outline-none"
-                >
-                  {Object.values(ArtStyle).map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-              </section>
-
-              <section className="space-y-2">
-                <label className="text-[10px] font-bold text-slate-500 uppercase">Format</label>
-                <select 
-                  value={aspectRatio}
-                  onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs outline-none"
-                >
-                  {Object.values(AspectRatio).map(r => <option key={r} value={r}>{r}</option>)}
-                </select>
-              </section>
-            </div>
-
-            <Button 
-              onClick={handleGenerate} 
-              isLoading={isLoading}
-              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-xl shadow-indigo-500/20 font-bold"
+          <div className="pt-4">
+            <button 
+              onClick={handleGenerate}
+              disabled={isLoading}
+              className={`w-full py-5 rounded-3xl font-black text-sm tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
+                mode === 'generate' 
+                ? 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 shadow-indigo-600/20' 
+                : mode === 'remove-bg'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/20'
+                  : 'bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 shadow-rose-600/20'
+              }`}
             >
-              <Sparkles className="mr-2" size={18} />
-              GENEREAZĂ IMAGINEA
-            </Button>
-
-            {error && (
-              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                <p className="text-xs text-red-400 leading-relaxed">{error}</p>
-                {error.includes("403") && (
-                  <button 
-                    onClick={openApiKeyDialog}
-                    className="mt-3 w-full py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-all"
-                  >
-                    SELECTEAZĂ CHEIE API CORECTĂ
-                  </button>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* Result Area */}
-          <div className="lg:col-span-8">
-            <div className="aspect-square lg:aspect-video bg-slate-900 border border-slate-800 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
               {isLoading ? (
-                <div className="flex flex-col items-center gap-4">
-                  <RefreshCcw className="animate-spin text-indigo-500" size={40} />
-                  <p className="text-slate-500 text-sm animate-pulse">Modelul NanoBanana procesează cererea...</p>
-                </div>
-              ) : imageUrl ? (
-                <>
-                  <img src={imageUrl} className="w-full h-full object-contain p-4" alt="Generat" />
-                  <div className="absolute bottom-6 right-6 flex gap-3">
-                    <button 
-                      onClick={() => window.open(imageUrl, '_blank')}
-                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-white transition-all border border-white/10"
-                    >
-                      <Maximize2 size={20} />
-                    </button>
-                    <a 
-                      href={imageUrl} 
-                      download="nano-banana-art.png"
-                      className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-all shadow-lg"
-                    >
-                      <Download size={20} />
-                    </a>
-                  </div>
-                </>
+                <RefreshCcw className="animate-spin" size={20} />
               ) : (
-                <div className="text-center opacity-20">
-                  <ImageIcon size={80} className="mx-auto mb-4" />
-                  <p className="text-xl font-medium italic">Imaginația ta prinde viață aici</p>
-                </div>
+                <Sparkles size={20} />
               )}
-            </div>
-            
-            <footer className="mt-8 flex items-center justify-center gap-4 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
-              <span>Google Gemini 2.5 Flash</span>
-              <div className="w-1 h-1 bg-slate-800 rounded-full" />
-              <span>NanoBanana 1K optimized</span>
-            </footer>
+              {mode === 'generate' ? t.generateBtn : mode === 'remove-bg' ? t.removeBgBtn : t.eraseBtn}
+            </button>
           </div>
         </div>
+
+        {/* Display Column */}
+        <div className="lg:col-span-8 h-full animate-in slide-in-from-right duration-700">
+          <ImageDisplay 
+            t={t}
+            imageUrl={imageUrl}
+            isLoading={isLoading}
+            error={error}
+            onUpdateImage={(url) => setImageUrl(url)}
+          />
+        </div>
       </main>
+
+      {/* Footer */}
+      <footer className="border-t border-white/5 bg-slate-900/20 py-12">
+        <div className="max-w-7xl mx-auto px-10 flex flex-col items-center gap-6">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-slate-800 rounded-lg flex items-center justify-center">
+              <Palette size={16} className="text-slate-400" />
+            </div>
+            <span className="text-sm font-black tracking-tighter text-slate-400">{t.appTitle}</span>
+          </div>
+          
+          <div className="flex items-center gap-8 text-[10px] font-black text-slate-600 uppercase tracking-[0.4em]">
+            <a href="#" className="hover:text-indigo-400 transition-colors">Privacy</a>
+            <a href="#" className="hover:text-indigo-400 transition-colors">Terms</a>
+            <a href="#" className="hover:text-indigo-400 transition-colors">Contact</a>
+          </div>
+
+          <div className="flex flex-col items-center gap-2">
+            <p className="text-[10px] font-bold text-slate-700 uppercase tracking-widest">
+              Powered by Gemini 2.5 Flash Image & NanoBanana Engine
+            </p>
+            <p className="text-[10px] text-slate-800 font-medium">
+              © {new Date().getFullYear()} IMAGE STUDIO BY MADRUN. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };

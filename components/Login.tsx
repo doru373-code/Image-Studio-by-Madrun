@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mail, Lock, LogIn, Palette, AlertCircle, UserPlus, ArrowLeft, Shield } from 'lucide-react';
+import { Mail, Lock, LogIn, Palette, AlertCircle, UserPlus, ArrowLeft, Shield, Eye, EyeOff } from 'lucide-react';
 import { translations } from '../translations';
 
 interface LoginProps {
@@ -18,6 +18,8 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
@@ -129,13 +131,21 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
                 <Lock size={18} />
               </div>
               <input
-                type="password"
+                type={showPassword ? "text" : "password"}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                 placeholder="••••••••"
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
             </div>
           </div>
 
@@ -147,13 +157,21 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
                   <Shield size={18} />
                 </div>
                 <input
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   required
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-11 pr-4 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl py-3.5 pl-11 pr-12 text-white placeholder-slate-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
                   placeholder="••••••••"
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 pr-4 flex items-center text-slate-500 hover:text-slate-300 transition-colors"
+                  aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                >
+                  {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
               </div>
             </div>
           )}
@@ -185,7 +203,7 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
         <div className="mt-8 text-center">
           {isRegistering ? (
             <button 
-              onClick={() => { setIsRegistering(false); setError(null); }}
+              onClick={() => { setIsRegistering(false); setError(null); setShowPassword(false); setShowConfirmPassword(false); }}
               className="inline-flex items-center gap-2 text-slate-500 text-sm hover:text-indigo-400 transition-colors group"
             >
               <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
@@ -195,7 +213,7 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
             <p className="text-slate-500 text-sm">
               Don't have an account? 
               <button 
-                onClick={() => { setIsRegistering(true); setError(null); }}
+                onClick={() => { setIsRegistering(true); setError(null); setShowPassword(false); }}
                 className="ml-1 text-indigo-400 font-semibold hover:text-indigo-300 transition-colors"
               >
                 Start for free

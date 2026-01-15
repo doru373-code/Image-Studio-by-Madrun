@@ -20,7 +20,8 @@ export enum ArtStyle {
   Anime = "Anime",
   PixelArt = "Pixel Art",
   Minimalist = "Minimalist",
-  Pexar = "Pexar (3D Animation)"
+  Pexar = "Pexar (3D Animation)",
+  Cartoon = "Cartoon"
 }
 
 export type ImageResolution = "1K";

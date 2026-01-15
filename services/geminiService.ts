@@ -8,7 +8,7 @@ export const generateImage = async (
   resolution: ImageResolution,
   referenceImage?: { data: string; mimeType: string }
 ): Promise<string> => {
-  // Re-instanțiem pentru a ne asigura că folosim cheia proaspăt selectată de utilizator
+  // Always create a fresh instance to catch any key updates from the browser environment
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
   const parts: any[] = [];
@@ -33,24 +33,28 @@ export const generateImage = async (
       },
     });
 
-    if (!response.candidates?.[0]) {
-      throw new Error("Nu am primit niciun rezultat de la AI.");
+    if (!response || !response.candidates || response.candidates.length === 0) {
+      throw new Error("Nu am primit un răspuns valid de la server.");
     }
 
     const candidate = response.candidates[0];
+    
     if (candidate.finishReason === 'SAFETY') {
-      throw new Error("Imaginea a fost blocată de filtrele de siguranță.");
+      throw new Error("Solicitarea a declanșat filtrele de siguranță. Încearcă o altă descriere.");
     }
 
+    // Extraction loop as per documentation guidelines
     for (const part of candidate.content.parts) {
-      if (part.inlineData?.data) {
-        return `data:${part.inlineData.mimeType || 'image/png'};base64,${part.inlineData.data}`;
+      if (part.inlineData && part.inlineData.data) {
+        const mimeType = part.inlineData.mimeType || 'image/png';
+        return `data:${mimeType};base64,${part.inlineData.data}`;
       }
     }
 
-    throw new Error("Datele imaginii lipsesc din răspuns.");
+    throw new Error("Imaginea nu a putut fi extrasă din răspunsul AI.");
   } catch (error: any) {
-    console.error("Gemini API Error:", error);
+    console.error("Gemini Service Error:", error);
+    // Passing error upstream for App.tsx to handle
     throw error;
   }
 };
