@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Mail, Lock, LogIn, Palette, AlertCircle, UserPlus, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, LogIn, Palette, AlertCircle, UserPlus, ArrowLeft, Shield } from 'lucide-react';
 import { translations } from '../translations';
 
 interface LoginProps {
@@ -207,6 +207,3 @@ export const Login: React.FC<LoginProps> = ({ t, onLogin }) => {
     </div>
   );
 };
-
-// Add missing Shield import to lucide-react above
-import { Shield } from 'lucide-react';

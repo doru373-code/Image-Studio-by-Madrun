@@ -19,12 +19,13 @@ export enum ArtStyle {
   OilPainting = "Oil Painting",
   Anime = "Anime",
   PixelArt = "Pixel Art",
-  Minimalist = "Minimalist"
+  Minimalist = "Minimalist",
+  Pexar = "Pexar (3D Animation)"
 }
 
-export type ImageResolution = "1K" | "2K" | "4K";
+export type ImageResolution = "1K";
 
-export type AppMode = 'generate' | 'erase' | 'video' | 'remove-bg';
+export type AppMode = 'generate' | 'erase' | 'remove-bg';
 
 export type Language = 'en' | 'fr' | 'ro';
 

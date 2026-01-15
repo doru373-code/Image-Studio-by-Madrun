@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon, Monitor, Zap, Eraser, Palette, Wand2, Video, Music, Scissors, Layers, ChevronRight, Mic, StopCircle, Film } from 'lucide-react';
+
+import React from 'react';
+import { Upload, X, Image as ImageIcon, Zap, Eraser, Palette, Wand2, Scissors, ChevronRight } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode } from '../types';
 import { translations } from '../translations';
 
@@ -44,71 +45,14 @@ export const Controls: React.FC<ControlsProps> = ({
   onGenerate,
   referenceImage1Preview,
   referenceImage2Preview,
-  referenceImage3Preview,
-  referenceVideoName,
   onReferenceImageSelect,
   onClearReferenceImage,
-  onReferenceVideoSelect,
-  onClearReferenceVideo,
   mode,
-  setMode,
-  audioFileName,
-  onAudioSelect,
-  onClearAudio
+  setMode
 }) => {
-  const [isRecording, setIsRecording] = useState(false);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const chunksRef = useRef<Blob[]>([]);
-
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2 | 3) => {
     if (e.target.files && e.target.files[0]) {
       onReferenceImageSelect(e.target.files[0], slot);
-    }
-  };
-
-  const handleVideoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onReferenceVideoSelect(e.target.files[0]);
-    }
-  };
-
-  const handleAudioChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      onAudioSelect(e.target.files[0]);
-    }
-  };
-
-  const startRecording = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      mediaRecorderRef.current = new MediaRecorder(stream);
-      chunksRef.current = [];
-
-      mediaRecorderRef.current.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          chunksRef.current.push(e.data);
-        }
-      };
-
-      mediaRecorderRef.current.onstop = () => {
-        const blob = new Blob(chunksRef.current, { type: 'audio/mp3' });
-        const file = new File([blob], "recording.mp3", { type: 'audio/mp3' });
-        onAudioSelect(file);
-        stream.getTracks().forEach(track => track.stop());
-      };
-
-      mediaRecorderRef.current.start();
-      setIsRecording(true);
-    } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert(t.errorMicPermission);
-    }
-  };
-
-  const stopRecording = () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
     }
   };
 
@@ -185,18 +129,6 @@ export const Controls: React.FC<ControlsProps> = ({
           {t.modeCreate}
         </button>
         <button
-          onClick={() => setMode('video')}
-          disabled={isGenerating}
-          className={`flex-1 flex items-center justify-center py-2.5 px-2 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
-            mode === 'video' 
-              ? 'bg-purple-600 text-white shadow-lg shadow-purple-500/20' 
-              : 'text-slate-400 hover:text-white hover:bg-slate-700/50'
-          }`}
-        >
-          <Video size={16} className="mr-2" />
-          {t.modeVideo}
-        </button>
-        <button
           onClick={() => setMode('erase')}
           disabled={isGenerating}
           className={`flex-1 flex items-center justify-center py-2.5 px-2 text-sm font-medium rounded-md transition-all duration-200 whitespace-nowrap ${
@@ -217,64 +149,6 @@ export const Controls: React.FC<ControlsProps> = ({
             {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
           </>
         )}
-        {mode === 'video' && (
-          <div className="w-full flex gap-2">
-            {!referenceVideoName ? (
-              <div className="flex-1 min-w-0">
-                <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
-                  {t.refVideo}
-                </label>
-                <div className="relative h-28 md:h-32">
-                  <input
-                    type="file"
-                    id="ref-video"
-                    accept="video/mp4,video/webm,video/ogg"
-                    className="hidden"
-                    onChange={handleVideoChange}
-                    disabled={isGenerating}
-                  />
-                  <label
-                    htmlFor="ref-video"
-                    className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-lg cursor-pointer transition-all ${
-                       isGenerating ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-800' : 'border-slate-600 bg-slate-800/50 hover:bg-slate-800 hover:border-indigo-500'
-                    }`}
-                  >
-                    <div className="flex flex-col items-center justify-center pt-2 pb-2 text-center px-2">
-                      <Film className="w-5 h-5 mb-1 text-purple-400" />
-                      <p className="text-[10px] text-slate-500 line-clamp-2">
-                        {t.uploadVideoRefHint}
-                      </p>
-                    </div>
-                  </label>
-                </div>
-              </div>
-            ) : (
-              <div className="flex-1 min-w-0">
-                 <label className="block text-sm font-medium text-slate-300 mb-2 truncate">
-                  {t.refVideo}
-                </label>
-                <div className="relative h-28 md:h-32 flex items-center justify-center bg-slate-800 rounded-lg border border-purple-500/30 overflow-hidden group">
-                   <Video className="w-8 h-8 text-purple-500/50" />
-                   <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <span className="text-[10px] text-white font-medium truncate px-2">{referenceVideoName}</span>
-                   </div>
-                   <button
-                    onClick={onClearReferenceVideo}
-                    disabled={isGenerating}
-                    className="absolute top-1 right-1 p-1 bg-black/50 hover:bg-red-500/80 rounded-full text-white backdrop-blur-sm transition-colors shadow-lg z-10"
-                    title={t.removeVideo}
-                  >
-                    <X size={12} />
-                  </button>
-                </div>
-              </div>
-            )}
-            <div className="flex-[2] flex gap-2">
-              {renderImageUpload(1, referenceImage1Preview, "Asset 1", "Face")}
-              {renderImageUpload(2, referenceImage2Preview, "Asset 2", "Profile")}
-            </div>
-          </div>
-        )}
         {(mode === 'erase' || mode === 'remove-bg') && (
           <div className="w-full">
              {renderImageUpload(1, referenceImage1Preview, 
@@ -285,90 +159,16 @@ export const Controls: React.FC<ControlsProps> = ({
         )}
       </div>
 
-      {mode === 'video' && (
-        <div className="space-y-2">
-           <label className="block text-sm font-medium text-slate-300">
-             {t.soundtrack}
-           </label>
-           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-             {!audioFileName ? (
-               <>
-                 <div className="relative">
-                   <input
-                     type="file"
-                     id="audio-file"
-                     accept="audio/mp3,audio/mpeg"
-                     className="hidden"
-                     onChange={handleAudioChange}
-                     disabled={isGenerating || isRecording}
-                   />
-                   <label
-                     htmlFor="audio-file"
-                     className={`flex items-center justify-center w-full p-3 border border-slate-700 rounded-lg cursor-pointer transition-all ${
-                        isGenerating || isRecording ? 'opacity-50 cursor-not-allowed bg-slate-800' : 'bg-slate-800 hover:bg-slate-750 hover:border-slate-600'
-                     }`}
-                   >
-                     <Music className="w-5 h-5 mr-2 text-purple-400" />
-                     <span className="text-sm text-slate-300">{t.uploadMp3}</span>
-                   </label>
-                 </div>
-
-                 <button
-                   onClick={isRecording ? stopRecording : startRecording}
-                   disabled={isGenerating}
-                   className={`flex items-center justify-center p-3 border rounded-lg transition-all ${
-                     isRecording 
-                      ? 'bg-red-900/30 border-red-500/50 text-red-200 animate-pulse' 
-                      : 'bg-slate-800 border-slate-700 hover:bg-slate-750 hover:border-slate-600 text-slate-300'
-                   } ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
-                 >
-                   {isRecording ? (
-                     <>
-                      <StopCircle className="w-5 h-5 mr-2 text-red-500" />
-                      <span className="text-sm">{t.stopRecording}</span>
-                     </>
-                   ) : (
-                     <>
-                      <Mic className="w-5 h-5 mr-2 text-indigo-400" />
-                      <span className="text-sm">{t.recordVoice}</span>
-                     </>
-                   )}
-                 </button>
-               </>
-             ) : (
-                <div className="col-span-2 flex items-center justify-between p-3 bg-purple-900/20 border border-purple-500/30 rounded-lg">
-                  <div className="flex items-center gap-2 overflow-hidden">
-                     <Music className="w-4 h-4 text-purple-400 shrink-0" />
-                     <span className="text-sm text-purple-200 truncate">{audioFileName}</span>
-                  </div>
-                  <button 
-                    onClick={onClearAudio}
-                    disabled={isGenerating}
-                    className="p-1 hover:bg-purple-800/50 rounded-full text-purple-300 transition-colors"
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-             )}
-           </div>
-           {isRecording && (
-             <p className="text-xs text-red-400 text-center animate-pulse font-medium">
-               {t.recording}
-             </p>
-           )}
-        </div>
-      )}
-
-      {(mode === 'generate' || mode === 'video') ? (
+      {(mode === 'generate') ? (
         <div className="space-y-2">
           <label htmlFor="prompt" className="block text-sm font-medium text-slate-300">
-            {mode === 'video' ? t.describeScene : t.describeImagination}
+            {t.describeImagination}
           </label>
           <textarea
             id="prompt"
             rows={4}
             className="w-full bg-slate-800 border border-slate-700 rounded-lg p-4 text-white placeholder-slate-500 focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all resize-none shadow-inner"
-            placeholder={mode === 'video' ? t.promptPlaceholderVideo : t.promptPlaceholderGen}
+            placeholder={t.promptPlaceholderGen}
             value={prompt}
             onChange={(e) => setPrompt(e.target.value)}
             disabled={isGenerating}
@@ -381,7 +181,7 @@ export const Controls: React.FC<ControlsProps> = ({
           {mode === 'erase' ? (
              <Wand2 className="w-5 h-5 text-rose-400 mt-0.5 shrink-0" />
           ) : (
-             <Layers className="w-5 h-5 text-cyan-400 mt-0.5 shrink-0" />
+             <Scissors size={18} className="text-cyan-400 mt-0.5 shrink-0" />
           )}
           <div>
             <p className={`text-sm font-medium ${mode === 'erase' ? 'text-rose-300' : 'text-cyan-300'}`}>
@@ -441,25 +241,11 @@ export const Controls: React.FC<ControlsProps> = ({
 
         <div className="space-y-2">
            <label className="block text-sm font-medium text-slate-300">
-            {mode === 'video' ? t.videoQuality : t.resolutionQuality}
+            {t.resolutionQuality}
           </label>
-          <div className="grid grid-cols-3 gap-2">
-            {(['1K', '2K', '4K'] as ImageResolution[]).map((res) => (
-              <button
-                key={res}
-                type="button"
-                onClick={() => setResolution(res)}
-                disabled={isGenerating}
-                className={`flex flex-col items-center justify-center p-2 rounded-md border transition-all ${
-                  resolution === res
-                    ? 'bg-indigo-600/20 border-indigo-500 text-indigo-400'
-                    : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-600 hover:bg-slate-750'
-                }`}
-              >
-                {res === '1K' ? <Zap size={16} className="mb-1" /> : <Monitor size={16} className="mb-1" />}
-                <span className="text-xs font-bold">{mode === 'video' ? (res === '1K' ? '720p' : '1080p') : res}</span>
-              </button>
-            ))}
+          <div className="flex items-center gap-2 p-3 bg-indigo-600/10 border border-indigo-500 rounded-lg text-indigo-400">
+             <Zap size={16} />
+             <span className="text-xs font-bold uppercase tracking-wider">NanoBanana 1K Optimized</span>
           </div>
         </div>
 
@@ -469,7 +255,6 @@ export const Controls: React.FC<ControlsProps> = ({
           </label>
           <div className="grid grid-cols-5 gap-2">
             {Object.entries(AspectRatio).map(([key, value]) => {
-              // Calculate representative icon heights based on 16px width
               let h = '16px';
               if (value === '1:1') h = '16px';
               else if (value === '4:5') h = '20px';

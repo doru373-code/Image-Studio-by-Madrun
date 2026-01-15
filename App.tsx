@@ -1,294 +1,56 @@
 
-import React, { useState, useEffect } from 'react';
-import { Palette, Sparkles, Eraser, Video, Globe, Scissors, CreditCard, ShieldCheck, LogOut, LayoutDashboard } from 'lucide-react';
-import { Controls } from './components/Controls';
-import { ImageDisplay } from './components/ImageDisplay';
-import { Button } from './components/Button';
-import { Pricing } from './components/Pricing';
-import { Login } from './components/Login';
-import { AdminDashboard } from './components/AdminDashboard';
-import { generateImage, generateVideo } from './services/geminiService';
-import { AspectRatio, ArtStyle, ImageResolution, AppMode, Language } from './types';
+import React, { useState, useCallback } from 'react';
+import { Palette, Sparkles, Image as ImageIcon, Zap, Key, RefreshCcw, Download, Maximize2, X, Upload } from 'lucide-react';
+import { generateImage } from './services/geminiService';
+import { AspectRatio, ArtStyle, ImageResolution } from './types';
 import { translations } from './translations';
+import { Button } from './components/Button';
 
-interface ReferenceImageData {
-  data: string; // base64 string
-  mimeType: string;
-  preview: string; // Data URL for display
-}
-
-type SubscriptionStatus = 'free' | 'pro' | 'trial';
-
-interface UserRecord {
-  id: string;
-  email: string;
-  subscription: SubscriptionStatus;
-  joinDate: string;
-}
-
-const INITIAL_MOCK_USERS: UserRecord[] = [
-  { id: '1', email: 'doru373@gmail.com', subscription: 'pro', joinDate: '2025-01-15' },
-  { id: '2', email: 'user1@example.com', subscription: 'free', joinDate: '2025-02-10' },
-  { id: '3', email: 'beta-tester@gmail.com', subscription: 'trial', joinDate: '2025-03-01' },
-];
+const STYLE_PROMPTS: Record<ArtStyle, string> = {
+  [ArtStyle.None]: "",
+  [ArtStyle.Photorealistic]: "ultra-realistic professional photography, 8k UHD, cinematic lighting",
+  [ArtStyle.Cinematic]: "cinematic movie still, dramatic lighting",
+  [ArtStyle.Surreal]: "surrealist masterpiece, dreamlike atmosphere",
+  [ArtStyle.Watercolor]: "soft watercolor painting",
+  [ArtStyle.Moebius]: "Jean Giraud Moebius style, clean lines",
+  [ArtStyle.HyperRealistic]: "hyper-realistic digital art, extreme detail",
+  [ArtStyle.Cyberpunk]: "cyberpunk aesthetic, neon lights",
+  [ArtStyle.OilPainting]: "classical oil painting on canvas",
+  [ArtStyle.Anime]: "high-quality modern anime style",
+  [ArtStyle.PixelArt]: "retro 16-bit pixel art",
+  [ArtStyle.Minimalist]: "minimalist flat design",
+  [ArtStyle.Pexar]: "3D CGI ANIMATED CHARACTER, Disney Pixar style"
+};
 
 const App: React.FC = () => {
-  const [lang, setLang] = useState<Language>('en');
-  const [mode, setMode] = useState<AppMode>('generate');
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
-  const [resolution, setResolution] = useState<ImageResolution>('1K');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [isVideo, setIsVideo] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showPricing, setShowPricing] = useState(false);
-  const [showAdmin, setShowAdmin] = useState(false);
-  const [subscription, setSubscription] = useState<SubscriptionStatus>('free');
-  const [user, setUser] = useState<{ email: string; isAdmin: boolean } | null>(null);
-  
-  // Simulated users for admin dashboard
-  const [users, setUsers] = useState<UserRecord[]>(INITIAL_MOCK_USERS);
+  const [refImage, setRefImage] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
-  // Reference Images State (Up to 3 for character cloning)
-  const [referenceImage1, setReferenceImage1] = useState<ReferenceImageData | null>(null);
-  const [referenceImage2, setReferenceImage2] = useState<ReferenceImageData | null>(null);
-  const [referenceImage3, setReferenceImage3] = useState<ReferenceImageData | null>(null);
+  const t = translations.ro;
 
-  // Reference Video State
-  const [referenceVideo, setReferenceVideo] = useState<File | null>(null);
-
-  // Audio state for video mode
-  const [audioFile, setAudioFile] = useState<File | null>(null);
-  const [audioUrl, setAudioUrl] = useState<string | null>(null);
-
-  const t = translations[lang];
-
-  // Load user from local storage
-  useEffect(() => {
-    const savedUser = localStorage.getItem('image-studio-user');
-    if (savedUser) {
-      const parsedUser = JSON.parse(savedUser);
-      setUser(parsedUser);
-      
-      // Check for saved subscription for this user
-      const savedSub = localStorage.getItem(`sub-${parsedUser.email}`);
-      if (savedSub) {
-        setSubscription(savedSub as SubscriptionStatus);
-      } else if (parsedUser.isAdmin) {
-        setSubscription('pro');
-      }
-    }
-  }, []);
-
-  // Sync users with current session for admin
-  useEffect(() => {
-    if (user && user.isAdmin) {
-       // Keep admin in sync with the user list
-       const updated = users.map(u => u.email === user.email ? { ...u, subscription: 'pro' } : u);
-       if (JSON.stringify(updated) !== JSON.stringify(users)) {
-         setUsers(updated);
-       }
-    }
-  }, [user]);
-
-  // Clean up secondary images when switching away from modes that use them
-  useEffect(() => {
-    if (mode === 'erase' || mode === 'remove-bg') {
-      setReferenceImage2(null);
-      setReferenceImage3(null);
-      setReferenceVideo(null);
-    } else if (mode === 'generate') {
-      setReferenceImage3(null);
-      setReferenceVideo(null);
-    }
-  }, [mode]);
-
-  const handleLogin = (email: string) => {
-    const isAdmin = email === 'doru373@gmail.com';
-    const userData = { email, isAdmin };
-    setUser(userData);
-    localStorage.setItem('image-studio-user', JSON.stringify(userData));
-    
-    const savedSub = localStorage.getItem(`sub-${email}`);
-    if (savedSub) {
-      setSubscription(savedSub as SubscriptionStatus);
-    } else if (isAdmin) {
-      setSubscription('pro');
-    } else {
-      setSubscription('free');
-    }
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    localStorage.removeItem('image-studio-user');
-    setSubscription('free');
-    setShowAdmin(false);
-  };
-
-  const handleUpdateUserSubscription = (userId: string, status: SubscriptionStatus) => {
-    const updatedUsers = users.map(u => {
-      if (u.id === userId) {
-        localStorage.setItem(`sub-${u.email}`, status);
-        return { ...u, subscription: status };
-      }
-      return u;
-    });
-    setUsers(updatedUsers);
-  };
-
-  const handleReferenceImageSelect = (file: File, slot: 1 | 2 | 3) => {
-    if (file.size > 5 * 1024 * 1024) {
-      setError(t.errorFileSize);
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      const matches = result.match(/^data:(.+);base64,(.+)$/);
-      if (matches) {
-        const imageData = {
-          mimeType: matches[1],
-          data: matches[2],
-          preview: result
-        };
-        
-        if (slot === 1) setReferenceImage1(imageData);
-        else if (slot === 2) setReferenceImage2(imageData);
-        else if (slot === 3) setReferenceImage3(imageData);
-        setError(null);
-      } else {
-        setError(t.errorProcessImage);
-      }
-    };
-    reader.onerror = () => {
-      setError(t.errorFileRead);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleReferenceVideoSelect = (file: File) => {
-    if (file.size > 20 * 1024 * 1024) {
-      setError(t.errorVideoSize);
-      return;
-    }
-    setReferenceVideo(file);
-    setError(null);
-  };
-
-  const handleAudioSelect = (file: File) => {
-    if (file.size > 10 * 1024 * 1024) {
-      setError(t.errorAudioSize);
-      return;
-    }
-    setAudioFile(file);
-    const url = URL.createObjectURL(file);
-    setAudioUrl(url);
-    setError(null);
-  };
-
-  const clearReferenceImage = (slot: 1 | 2 | 3) => {
-    if (slot === 1) setReferenceImage1(null);
-    else if (slot === 2) setReferenceImage2(null);
-    else if (slot === 3) setReferenceImage3(null);
-  };
-
-  const clearReferenceVideo = () => setReferenceVideo(null);
-
-  const clearAudio = () => {
-    setAudioFile(null);
-    if (audioUrl) URL.revokeObjectURL(audioUrl);
-    setAudioUrl(null);
-  };
-
-  const handleSubscribe = (plan: 'pro' | 'trial') => {
-    setSubscription(plan);
-    if (user) {
-      localStorage.setItem(`sub-${user.email}`, plan);
-    }
-    setShowPricing(false);
-  };
-
-  const extractFramesFromVideo = async (videoFile: File, frameCount: number = 3): Promise<ReferenceImageData[]> => {
-    return new Promise((resolve, reject) => {
-      const video = document.createElement('video');
-      const canvas = document.createElement('canvas');
-      const ctx = canvas.getContext('2d');
-      const url = URL.createObjectURL(videoFile);
-      
-      video.src = url;
-      video.muted = true;
-      video.playsInline = true;
-
-      video.onloadeddata = async () => {
-        const frames: ReferenceImageData[] = [];
-        const duration = video.duration;
-        const intervals = [0.1, duration / 2, duration - 0.1];
-
-        for (let i = 0; i < Math.min(frameCount, intervals.length); i++) {
-          video.currentTime = intervals[i];
-          await new Promise(r => video.onseeked = r);
-          
-          canvas.width = video.videoWidth;
-          canvas.height = video.videoHeight;
-          ctx?.drawImage(video, 0, 0);
-          
-          const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-          const matches = dataUrl.match(/^data:(.+);base64,(.+)$/);
-          if (matches) {
-            frames.push({
-              mimeType: matches[1],
-              data: matches[2],
-              preview: dataUrl
-            });
-          }
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        const matches = result.match(/^data:(.+);base64,(.+)$/);
+        if (matches) {
+          setRefImage({ mimeType: matches[1], data: matches[2], preview: result });
         }
-        
-        URL.revokeObjectURL(url);
-        resolve(frames);
       };
-
-      video.onerror = () => {
-        URL.revokeObjectURL(url);
-        reject(new Error(t.errorProcessVideo));
-      };
-    });
+      reader.readAsDataURL(file);
+    }
   };
 
-  const checkApiKey = async (): Promise<boolean> => {
-    if (window.aistudio) {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        try {
-          await window.aistudio.openSelectKey();
-          return true;
-        } catch (e) {
-          console.error("Failed to select key", e);
-          return false;
-        }
-      }
-    }
-    return true;
-  };
-
-  const handleGenerate = async () => {
-    const hasRef1 = !!referenceImage1;
-    const hasRefVideo = !!referenceVideo;
-    const hasPrompt = !!prompt.trim();
-
-    if ((mode === 'generate' || mode === 'video') && !hasPrompt && !hasRef1 && !hasRefVideo) {
-        setError(t.errorPromptOrImage);
-        return;
-    }
-    if (mode === 'erase' && !hasRef1) {
-      setError(t.errorEraserImage);
-      return;
-    }
-    if (mode === 'remove-bg' && !hasRef1) {
-      setError(t.errorRemoveBgImage);
+  const handleGenerate = useCallback(async () => {
+    if (!prompt.trim() && !refImage) {
+      setError("Introdu un text sau încarcă o imagine.");
       return;
     }
 
@@ -297,350 +59,183 @@ const App: React.FC = () => {
     setImageUrl(null);
 
     try {
-      if (resolution === '2K' || resolution === '4K' || mode === 'video') {
-        const keySelected = await checkApiKey();
-        if (!keySelected && window.aistudio) {
-           setError(t.errorApiKey);
-           setIsLoading(false);
-           return;
-        }
-      }
-
-      let resultUrl = "";
-
-      if (mode === 'video') {
-        const refs = [];
-        
-        if (referenceVideo) {
-          const videoFrames = await extractFramesFromVideo(referenceVideo);
-          refs.push(...videoFrames.map(f => ({ data: f.data, mimeType: f.mimeType })));
-        }
-
-        if (referenceImage1 && refs.length < 3) refs.push({ data: referenceImage1.data, mimeType: referenceImage1.mimeType });
-        if (referenceImage2 && refs.length < 3) refs.push({ data: referenceImage2.data, mimeType: referenceImage2.mimeType });
-        if (referenceImage3 && refs.length < 3) refs.push({ data: referenceImage3.data, mimeType: referenceImage3.mimeType });
-
-        resultUrl = await generateVideo(
-           prompt,
-           aspectRatio,
-           resolution,
-           refs.slice(0, 3)
-        );
-        setIsVideo(true);
-      } else {
-        let finalPrompt = prompt;
-        if (mode === 'erase') {
-          finalPrompt = "Remove all watermarks, text, logos, and overlay patterns from the image. Reconstruct the background seamlessly to look natural and untouched.";
-        } else if (mode === 'remove-bg') {
-          finalPrompt = "Remove the background from the image. The output should be the subject on a plain white background.";
-        } else if (style !== ArtStyle.None) {
-          finalPrompt = `${prompt}. Art style: ${style}. High quality, detailed.`;
-        }
-
-        resultUrl = await generateImage(
-          finalPrompt, 
-          aspectRatio,
-          resolution,
-          referenceImage1 ? { data: referenceImage1.data, mimeType: referenceImage1.mimeType } : undefined,
-          referenceImage2 ? { data: referenceImage2.data, mimeType: referenceImage2.mimeType } : undefined
-        );
-        setIsVideo(false);
-      }
-
+      const finalPrompt = style !== ArtStyle.None ? `${prompt}. Style: ${STYLE_PROMPTS[style]}` : prompt;
+      
+      const resultUrl = await generateImage(
+        finalPrompt, 
+        aspectRatio, 
+        "1K", 
+        refImage ? { data: refImage.data, mimeType: refImage.mimeType } : undefined
+      );
+      
       setImageUrl(resultUrl);
-
     } catch (err: any) {
-      const errorMessage = err.message || "";
-      if (errorMessage.includes("Requested entity was not found") && window.aistudio) {
-        try {
-          await window.aistudio.openSelectKey();
-          setError(t.errorApiKeyUpdate);
-        } catch (e) {
-          setError(t.errorApiKeyFail);
-        }
+      if (err.message.includes("403")) {
+        setError("Eroare 403: Acces Refuzat. Modelul NanoBanana Pro necesită o cheie API proprie dintr-un proiect Google Cloud cu facturare activă.");
       } else {
-        setError(errorMessage || t.errorGeneric);
+        setError(err.message || "A apărut o eroare la generare.");
       }
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [prompt, refImage, style, aspectRatio]);
 
-  const handleRemoveBackgroundFromResult = () => {
-    if (imageUrl && !isVideo && imageUrl.startsWith('data:')) {
-      const matches = imageUrl.match(/^data:(.+);base64,(.+)$/);
-      if (matches) {
-        setReferenceImage1({
-          mimeType: matches[1],
-          data: matches[2],
-          preview: imageUrl
-        });
-        setReferenceImage2(null);
-        setReferenceImage3(null);
-        setReferenceVideo(null);
-        setMode('remove-bg');
-        setPrompt('');
-        setError(null);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      }
+  const openApiKeyDialog = async () => {
+    if (window.aistudio) {
+      await window.aistudio.openSelectKey();
+      setError(null);
     }
   };
-
-  const handleUpdateImage = (newUrl: string) => {
-    setImageUrl(newUrl);
-  };
-
-  const isGenerateDisabled = () => {
-    const hasRef1 = !!referenceImage1;
-    const hasRefVideo = !!referenceVideo;
-    const hasPrompt = !!prompt.trim();
-
-    if (mode === 'generate' || mode === 'video') {
-      return !hasPrompt && !hasRef1 && !hasRefVideo;
-    }
-    return !hasRef1;
-  };
-
-  const getHeaderIcon = () => {
-     if (mode === 'erase') return <Eraser className="w-6 h-6 text-white" />;
-     if (mode === 'video') return <Video className="w-6 h-6 text-white" />;
-     if (mode === 'remove-bg') return <Scissors className="w-6 h-6 text-white" />;
-     return <Palette className="w-6 h-6 text-white" />;
-  };
-
-  const getHeaderColor = () => {
-     if (mode === 'erase') return 'bg-rose-500';
-     if (mode === 'video') return 'bg-purple-500';
-     if (mode === 'remove-bg') return 'bg-cyan-500';
-     return 'bg-indigo-500';
-  };
-
-  const getHeaderTitle = () => {
-    if (mode === 'erase') return t.eraserTitle;
-    if (mode === 'video') return t.videoTitle;
-    if (mode === 'remove-bg') return t.removeBgTitle;
-    return t.appTitle;
-  };
-  
-  const getHeaderDesc = () => {
-    if (mode === 'erase') return t.eraserDesc;
-    if (mode === 'video') return t.videoDesc;
-    if (mode === 'remove-bg') return t.removeBgDesc;
-    return t.appDesc;
-  };
-
-  if (!user) {
-    return <Login t={t} onLogin={handleLogin} />;
-  }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-200 selection:bg-indigo-500/30">
-      {/* Dynamic Background */}
-      <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className={`absolute top-[-10%] left-[-10%] w-[40%] h-[40%] rounded-full blur-[128px] transition-colors duration-1000 ${
-          mode === 'erase' ? 'bg-rose-900/20' : mode === 'video' ? 'bg-purple-900/20' : mode === 'remove-bg' ? 'bg-cyan-900/20' : 'bg-indigo-900/20'
-        }`} />
-        <div className={`absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full blur-[128px] transition-colors duration-1000 ${
-          mode === 'erase' ? 'bg-orange-900/20' : mode === 'video' ? 'bg-blue-900/20' : mode === 'remove-bg' ? 'bg-emerald-900/20' : 'bg-purple-900/20'
-        }`} />
-      </div>
-
-      {/* Navigation Header */}
-      <nav className="relative z-50 flex items-center justify-between px-6 py-4 bg-slate-900/50 backdrop-blur-md border-b border-slate-800">
-        <div className="flex items-center gap-6">
+    <div className="min-h-screen bg-slate-950 text-slate-100 font-sans">
+      {/* Header */}
+      <nav className="border-b border-slate-800 bg-slate-900/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="p-1.5 bg-indigo-500 rounded-lg shadow-lg shadow-indigo-500/20">
+            <div className="bg-indigo-600 p-1.5 rounded-lg">
               <Palette size={20} className="text-white" />
             </div>
-            <span className="font-bold tracking-tight text-white hidden sm:inline">Image Studio</span>
+            <span className="font-bold tracking-tight">Studio NanoBanana</span>
           </div>
-
-          <div className="hidden lg:flex gap-2 bg-slate-800/80 p-1 rounded-lg border border-slate-700">
-            {(['en', 'fr', 'ro'] as Language[]).map((l) => (
-              <button
-                key={l}
-                onClick={() => setLang(l)}
-                className={`px-2 py-1 text-[10px] font-black rounded uppercase transition-all ${
-                  lang === l 
-                    ? 'bg-slate-700 text-white shadow-sm' 
-                    : 'text-slate-500 hover:text-slate-300'
-                }`}
-              >
-                {l}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-3">
-          {user.isAdmin && (
-            <button 
-              onClick={() => setShowAdmin(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-emerald-500/10 border border-emerald-500/30 hover:bg-emerald-500/20 rounded-full text-[10px] font-black uppercase text-emerald-400 transition-all"
-            >
-              <LayoutDashboard size={14} />
-              {t.adminDashboard}
-            </button>
-          )}
-
+          
           <button 
-            onClick={() => setShowPricing(true)}
-            className={`flex items-center gap-2 px-4 py-2 rounded-full text-xs font-bold transition-all ${
-              subscription !== 'free' 
-                ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30' 
-                : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-500/20'
-            }`}
+            onClick={openApiKeyDialog}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 border border-slate-700 rounded-full text-xs font-bold transition-all"
           >
-            {subscription !== 'free' ? (
-              <>
-                <Sparkles size={14} />
-                {subscription === 'pro' ? 'Pro Plan' : 'Trial Active'}
-              </>
-            ) : (
-              <>
-                <CreditCard size={14} />
-                {t.upgrade}
-              </>
-            )}
-          </button>
-
-          <div className="w-px h-6 bg-slate-800 mx-1" />
-
-          <button
-            onClick={handleLogout}
-            className="p-2 text-slate-400 hover:text-red-400 transition-colors"
-            title="Sign Out"
-          >
-            <LogOut size={20} />
+            <Key size={14} className="text-amber-400" />
+            CONFIGUREAZĂ CHEIE API
           </button>
         </div>
       </nav>
 
-      {showPricing && (
-        <Pricing 
-          t={t} 
-          userEmail={user.email}
-          currentPlan={subscription}
-          onClose={() => setShowPricing(false)}
-          onSubscribe={handleSubscribe}
-        />
-      )}
+      <main className="max-w-7xl mx-auto p-6 lg:p-10">
+        <div className="grid lg:grid-cols-12 gap-10">
+          
+          {/* Controls */}
+          <div className="lg:col-span-4 space-y-8">
+            <section className="space-y-4">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Imagine de Referință</label>
+              {!refImage ? (
+                <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed border-slate-800 rounded-2xl cursor-pointer hover:bg-slate-900/50 hover:border-indigo-500/50 transition-all group">
+                  <Upload className="text-slate-600 group-hover:text-indigo-400 mb-2" />
+                  <span className="text-xs text-slate-500">Încarcă o poză (opțional)</span>
+                  <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                </label>
+              ) : (
+                <div className="relative rounded-2xl overflow-hidden border border-slate-700 h-32">
+                  <img src={refImage.preview} className="w-full h-full object-cover" alt="Preview" />
+                  <button 
+                    onClick={() => setRefImage(null)}
+                    className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500 rounded-full text-white backdrop-blur-sm transition-all"
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )}
+            </section>
 
-      {showAdmin && user.isAdmin && (
-        <AdminDashboard 
-          t={t}
-          users={users}
-          onClose={() => setShowAdmin(false)}
-          onUpdateUserSubscription={handleUpdateUserSubscription}
-        />
-      )}
-
-      <div className="relative z-10 container mx-auto px-4 py-8 md:py-12 max-w-6xl">
-        <header className="text-center mb-12 animate-in fade-in slide-in-from-top-4 duration-500">
-          <div className="inline-flex items-center justify-center p-3 mb-4 rounded-2xl bg-slate-800/50 ring-1 ring-slate-700/50 backdrop-blur-sm shadow-xl">
-             <div className={`p-2 rounded-lg mr-3 transition-colors duration-300 ${getHeaderColor()}`}>
-               {getHeaderIcon()}
-             </div>
-             <h1 className="text-2xl md:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 via-white to-indigo-200 tracking-tight transition-all">
-               {getHeaderTitle()}
-             </h1>
-          </div>
-          <p className="text-slate-400 max-w-xl mx-auto text-lg transition-all duration-300">
-            {getHeaderDesc()}
-          </p>
-        </header>
-
-        <main className="grid lg:grid-cols-5 gap-8 items-start">
-          <div className="lg:col-span-2 space-y-8 animate-in slide-in-from-left-4 duration-500">
-            <div className="bg-slate-900/50 backdrop-blur-sm border border-slate-800 p-6 rounded-2xl shadow-xl">
-              <Controls 
-                t={t}
-                prompt={prompt}
-                setPrompt={setPrompt}
-                style={style}
-                setStyle={setStyle}
-                aspectRatio={aspectRatio}
-                setAspectRatio={setAspectRatio}
-                resolution={resolution}
-                setResolution={setResolution}
-                isGenerating={isLoading}
-                onGenerate={handleGenerate}
-                referenceImage1Preview={referenceImage1?.preview || null}
-                referenceImage2Preview={referenceImage2?.preview || null}
-                referenceImage3Preview={referenceImage3?.preview || null}
-                referenceVideoName={referenceVideo?.name || null}
-                onReferenceImageSelect={handleReferenceImageSelect}
-                onClearReferenceImage={clearReferenceImage}
-                onReferenceVideoSelect={handleReferenceVideoSelect}
-                onClearReferenceVideo={clearReferenceVideo}
-                mode={mode}
-                setMode={setMode}
-                audioFileName={audioFile ? audioFile.name : null}
-                onAudioSelect={handleAudioSelect}
-                onClearAudio={clearAudio}
+            <section className="space-y-4">
+              <label className="text-sm font-bold text-slate-400 uppercase tracking-widest">Descriere Proiect</label>
+              <textarea 
+                value={prompt}
+                onChange={(e) => setPrompt(e.target.value)}
+                placeholder="Ex: Un portret cinematic al unui astronaut în stil cyberpunk..."
+                className="w-full bg-slate-900 border border-slate-800 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-indigo-500 outline-none min-h-[120px] transition-all"
               />
-              
-              <div className="mt-8 pt-6 border-t border-slate-800">
-                <Button 
-                  onClick={handleGenerate} 
-                  isLoading={isLoading} 
-                  disabled={isGenerateDisabled()}
-                  className={`w-full ${
-                    mode === 'erase' 
-                      ? 'bg-rose-600 hover:bg-rose-700 shadow-rose-500/30' 
-                      : mode === 'remove-bg'
-                        ? 'bg-cyan-600 hover:bg-cyan-700 shadow-cyan-500/30'
-                        : mode === 'video' 
-                          ? 'bg-purple-600 hover:bg-purple-700 shadow-purple-500/30'
-                          : ''
-                  }`}
+            </section>
+
+            <div className="grid grid-cols-2 gap-4">
+              <section className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Stil Artistic</label>
+                <select 
+                  value={style}
+                  onChange={(e) => setStyle(e.target.value as ArtStyle)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs outline-none"
                 >
-                  <Sparkles className="w-5 h-5 mr-2" />
-                  {mode === 'erase' 
-                    ? t.eraseWatermark 
-                    : mode === 'remove-bg'
-                      ? t.removeBackground
-                      : mode === 'video' 
-                        ? t.generateVideo
-                        : (resolution === '1K' ? t.generateArtwork : t.generateUpscale.replace('{res}', resolution))
-                  }
-                </Button>
+                  {Object.values(ArtStyle).map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              </section>
+
+              <section className="space-y-2">
+                <label className="text-[10px] font-bold text-slate-500 uppercase">Format</label>
+                <select 
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value as AspectRatio)}
+                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs outline-none"
+                >
+                  {Object.values(AspectRatio).map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </section>
+            </div>
+
+            <Button 
+              onClick={handleGenerate} 
+              isLoading={isLoading}
+              className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 rounded-2xl shadow-xl shadow-indigo-500/20 font-bold"
+            >
+              <Sparkles className="mr-2" size={18} />
+              GENEREAZĂ IMAGINEA
+            </Button>
+
+            {error && (
+              <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                <p className="text-xs text-red-400 leading-relaxed">{error}</p>
+                {error.includes("403") && (
+                  <button 
+                    onClick={openApiKeyDialog}
+                    className="mt-3 w-full py-2 bg-red-500 text-white rounded-lg text-xs font-bold hover:bg-red-600 transition-all"
+                  >
+                    SELECTEAZĂ CHEIE API CORECTĂ
+                  </button>
+                )}
               </div>
-            </div>
-
-            <div className="hidden lg:block bg-indigo-900/10 border border-indigo-900/20 p-5 rounded-xl text-sm text-indigo-300">
-              <p className="font-semibold mb-2 flex items-center gap-2 text-indigo-200">
-                <span className="bg-indigo-500/20 p-1 rounded">💡</span> {t.proTip}
-              </p>
-              <p className="opacity-80">
-                {mode === 'video' 
-                  ? t.videoTip
-                  : t.proTipDesc
-                }
-              </p>
-            </div>
+            )}
           </div>
 
-          <div className="lg:col-span-3 animate-in slide-in-from-right-4 duration-500">
-            <div className="h-full">
-              <ImageDisplay 
-                t={t}
-                imageUrl={imageUrl} 
-                isLoading={isLoading} 
-                error={error} 
-                isVideo={isVideo}
-                audioUrl={audioUrl}
-                onRemoveBackground={handleRemoveBackgroundFromResult}
-                onUpdateImage={handleUpdateImage}
-              />
+          {/* Result Area */}
+          <div className="lg:col-span-8">
+            <div className="aspect-square lg:aspect-video bg-slate-900 border border-slate-800 rounded-[2rem] flex flex-col items-center justify-center relative overflow-hidden shadow-2xl">
+              {isLoading ? (
+                <div className="flex flex-col items-center gap-4">
+                  <RefreshCcw className="animate-spin text-indigo-500" size={40} />
+                  <p className="text-slate-500 text-sm animate-pulse">Modelul NanoBanana procesează cererea...</p>
+                </div>
+              ) : imageUrl ? (
+                <>
+                  <img src={imageUrl} className="w-full h-full object-contain p-4" alt="Generat" />
+                  <div className="absolute bottom-6 right-6 flex gap-3">
+                    <button 
+                      onClick={() => window.open(imageUrl, '_blank')}
+                      className="p-3 bg-white/10 hover:bg-white/20 backdrop-blur-md rounded-xl text-white transition-all border border-white/10"
+                    >
+                      <Maximize2 size={20} />
+                    </button>
+                    <a 
+                      href={imageUrl} 
+                      download="nano-banana-art.png"
+                      className="p-3 bg-indigo-600 hover:bg-indigo-700 rounded-xl text-white transition-all shadow-lg"
+                    >
+                      <Download size={20} />
+                    </a>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center opacity-20">
+                  <ImageIcon size={80} className="mx-auto mb-4" />
+                  <p className="text-xl font-medium italic">Imaginația ta prinde viață aici</p>
+                </div>
+              )}
             </div>
+            
+            <footer className="mt-8 flex items-center justify-center gap-4 text-slate-600 text-[10px] font-bold uppercase tracking-widest">
+              <span>Google Gemini 2.5 Flash</span>
+              <div className="w-1 h-1 bg-slate-800 rounded-full" />
+              <span>NanoBanana 1K optimized</span>
+            </footer>
           </div>
-        </main>
-
-        <footer className="mt-16 text-center text-slate-600 text-sm">
-          <p>{t.footer}</p>
-        </footer>
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
