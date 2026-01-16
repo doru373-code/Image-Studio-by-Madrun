@@ -268,7 +268,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
             {t.aspectRatio}
           </label>
-          <div className="grid grid-cols-5 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
             {Object.entries(AspectRatio)
               .filter(([_, value]) => mode !== 'video' || (value === '16:9' || value === '9:16' || value === '1:1'))
               .map(([key, value]) => {
@@ -278,6 +278,7 @@ export const Controls: React.FC<ControlsProps> = ({
                 else if (value === '3:4') h = '20px';
                 else if (value === '16:9') h = '8px';
                 else if (value === '9:16') h = '24px';
+                else if (value === 'A4') h = '21px'; // A4 specific height for icon
 
                 return (
                   <button

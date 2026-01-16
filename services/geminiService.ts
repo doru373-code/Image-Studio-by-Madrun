@@ -21,35 +21,52 @@ export const generateImage = async (
   }
   parts.push({ text: prompt });
 
+  // Map "A4" to "3:4" as it is the closest valid Gemini API vertical ratio
+  const apiRatio = (aspectRatio as string) === "A4" ? "3:4" : aspectRatio;
+
   try {
     const response = await ai.models.generateContent({
       model: 'gemini-2.5-flash-image',
       contents: { parts: parts },
       config: {
         imageConfig: {
-          aspectRatio: aspectRatio
+          aspectRatio: apiRatio as any
         }
       },
     });
 
     if (!response || !response.candidates || response.candidates.length === 0) {
-      throw new Error("Nu am primit un răspuns valid de la server.");
+      throw new Error("Nu am primit un răspuns valid de la server. Verifică conexiunea sau cheia API.");
     }
 
     const candidate = response.candidates[0];
     
     if (candidate.finishReason === 'SAFETY') {
-      throw new Error("Solicitarea a declanșat filtrele de siguranță. Încearcă o altă descriere.");
+      throw new Error("Solicitarea a declanșat filtrele de siguranță. Încearcă o altă descriere mai puțin sensibilă.");
     }
+
+    if (!candidate.content || !candidate.content.parts) {
+      throw new Error("Modelul a returnat un răspuns gol. Încearcă să reformulezi cerința.");
+    }
+
+    let detectedText = "";
 
     for (const part of candidate.content.parts) {
       if (part.inlineData && part.inlineData.data) {
         const mimeType = part.inlineData.mimeType || 'image/png';
         return `data:${mimeType};base64,${part.inlineData.data}`;
       }
+      if (part.text) {
+        detectedText += part.text + " ";
+      }
     }
 
-    throw new Error("Imaginea nu a putut fi extrasă din răspunsul AI.");
+    // Dacă modelul a returnat text în loc de imagine, afișăm acel text sau o eroare generică
+    if (detectedText.trim()) {
+      throw new Error(`Modelul a refuzat generarea imaginii și a răspuns: "${detectedText.trim()}"`);
+    }
+
+    throw new Error("Imaginea nu a putut fi extrasă din răspunsul AI. Modelul nu a generat date vizuale.");
   } catch (error: any) {
     console.error("Gemini Image Error:", error);
     throw error;
@@ -62,7 +79,6 @@ export const generateVideo = async (
   resolution: VideoResolution,
   referenceImage?: { data: string; mimeType: string }
 ): Promise<string> => {
-  // Creating a new instance to ensure we use the latest selected API Key
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   try {
@@ -80,27 +96,24 @@ export const generateVideo = async (
       }
     });
 
-    // Polling for the video generation to complete
     while (!operation.done) {
-      await new Promise(resolve => setTimeout(resolve, 10000)); // Wait 10 seconds between checks
+      await new Promise(resolve => setTimeout(resolve, 10000));
       operation = await ai.operations.getVideosOperation({ operation: operation });
     }
 
-    // Check for errors in the finished operation
     if (operation.error) {
        console.error("Operation Error details:", operation.error);
-       throw new Error(`Veo Operation Error: ${operation.error.message || 'The video generation process failed.'}`);
+       throw new Error(`Veo Operation Error: ${operation.error.message || 'Procesul de generare video a eșuat.'}`);
     }
 
     const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
     if (!downloadLink) {
-      throw new Error("Video generation completed but failed to return a valid download link.");
+      throw new Error("Generarea video s-a încheiat, dar link-ul de descărcare lipsește.");
     }
 
-    // Fetch the MP4 bytes with the API key
     const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
     if (!response.ok) {
-       throw new Error(`Failed to download video file: ${response.statusText}`);
+       throw new Error(`Eroare la descărcarea fișierului video: ${response.statusText}`);
     }
     const blob = await response.blob();
     return URL.createObjectURL(blob);

@@ -84,7 +84,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Checking for Veo API Key requirement
     if (mode === 'video' && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
@@ -108,11 +107,11 @@ const App: React.FC = () => {
       } else {
         let finalPrompt = "";
         if (mode === 'remove-bg') {
-          finalPrompt = "Professional background removal. High contrast, isolated subject.";
+          finalPrompt = "Output an image of the main subject from this source image but with the background completely removed and transparent/solid white. Professional clean background removal, high subject isolation.";
         } else if (mode === 'erase') {
-          finalPrompt = `Modify image: ${prompt}. Professional integration.`;
+          finalPrompt = `Modify this image according to this instruction: ${prompt}. Execute the change professionally while maintaining the original style and lighting.`;
         } else if (mode === 'pencil-sketch') {
-          finalPrompt = "Professional hand-drawn pencil sketch, graphite pencil art, realistic shading, fine lines, artistic paper texture, monochromatic graphite masterpiece, detailed sketches.";
+          finalPrompt = "Redraw this image as a professional hand-drawn pencil sketch. Use graphite pencil art style, realistic shading, fine lines, artistic paper texture. Output a monochromatic graphite masterpiece.";
         } else {
           finalPrompt = `${STYLE_PROMPTS[style] ? STYLE_PROMPTS[style] + ', ' : ''}${prompt}`;
         }
@@ -134,7 +133,7 @@ const App: React.FC = () => {
       } else if (errorMessage.includes("429") || errorMessage.toLowerCase().includes("quota") || errorMessage.toLowerCase().includes("exhausted")) {
         setError(t.errorQuota);
       } else if (errorMessage.toLowerCase().includes("requested entity was not found")) {
-        setError("Project misconfiguration. Please select a valid API key from a paid GCP project.");
+        setError("Eroare de configurare proiect. Te rugăm să selectezi o cheie API validă dintr-un proiect GCP cu facturare activă.");
         if (window.aistudio) {
            window.aistudio.openSelectKey();
         }
