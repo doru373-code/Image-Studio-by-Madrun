@@ -25,8 +25,9 @@ export enum ArtStyle {
 }
 
 export type ImageResolution = "1K";
+export type VideoResolution = "720p" | "1080p";
 
-export type AppMode = 'generate' | 'erase' | 'remove-bg';
+export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'video' | 'pencil-sketch';
 
 export type Language = 'en' | 'fr' | 'ro';
 

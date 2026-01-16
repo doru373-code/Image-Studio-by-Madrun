@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Upload, X, Image as ImageIcon, Zap, Eraser, Palette, Wand2, Scissors, ChevronRight } from 'lucide-react';
-import { AspectRatio, ArtStyle, ImageResolution, AppMode } from '../types';
+import { Upload, X, Image as ImageIcon, Zap, Eraser, Palette, Wand2, Scissors, ChevronRight, Video, Pencil } from 'lucide-react';
+import { AspectRatio, ArtStyle, ImageResolution, AppMode, VideoResolution } from '../types';
 import { translations } from '../translations';
 
 interface ControlsProps {
@@ -14,6 +14,8 @@ interface ControlsProps {
   setAspectRatio: (value: AspectRatio) => void;
   resolution: ImageResolution;
   setResolution: (value: ImageResolution) => void;
+  videoResolution: VideoResolution;
+  setVideoResolution: (value: VideoResolution) => void;
   isGenerating: boolean;
   onGenerate: () => void;
   referenceImage1Preview: string | null;
@@ -39,6 +41,8 @@ export const Controls: React.FC<ControlsProps> = ({
   setStyle,
   aspectRatio,
   setAspectRatio,
+  videoResolution,
+  setVideoResolution,
   isGenerating,
   referenceImage1Preview,
   referenceImage2Preview,
@@ -100,7 +104,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
             <span className="text-[9px] text-white font-black uppercase tracking-widest flex items-center gap-1.5">
               <ImageIcon size={10} className="text-indigo-400" /> 
-              {mode === 'generate' ? t.referenceActive : t.sourceImage}
+              {mode === 'generate' || mode === 'video' ? t.referenceActive : t.sourceImage}
             </span>
           </div>
         </div>
@@ -111,11 +115,11 @@ export const Controls: React.FC<ControlsProps> = ({
   return (
     <div className="space-y-8">
       {/* Mode Switcher */}
-      <div className="flex p-1.5 bg-slate-900 rounded-2xl border border-white/5 shadow-inner gap-1">
+      <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900 rounded-2xl border border-white/5 shadow-inner">
         <button
           onClick={() => setMode('generate')}
           disabled={isGenerating}
-          className={`flex-1 flex items-center justify-center py-3 px-2 text-xs font-bold rounded-xl transition-all duration-300 ${
+          className={`flex items-center justify-center py-3 px-2 text-xs font-bold rounded-xl transition-all duration-300 ${
             mode === 'generate' 
               ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
               : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
@@ -125,99 +129,95 @@ export const Controls: React.FC<ControlsProps> = ({
           {t.modeCreate}
         </button>
         <button
+          onClick={() => setMode('video')}
+          disabled={isGenerating}
+          className={`flex items-center justify-center py-3 px-2 text-xs font-bold rounded-xl transition-all duration-300 ${
+            mode === 'video' 
+              ? 'bg-purple-600 text-white shadow-lg shadow-purple-600/20' 
+              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+          }`}
+        >
+          <Video size={16} className="mr-2" />
+          {t.modeVideo}
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <button
           onClick={() => setMode('erase')}
           disabled={isGenerating}
-          className={`flex-1 flex items-center justify-center py-3 px-2 text-xs font-bold rounded-xl transition-all duration-300 ${
+          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
             mode === 'erase' 
-              ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/20' 
-              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
+              ? 'bg-rose-600 text-white border-rose-500 shadow-lg shadow-rose-600/20' 
+              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
           }`}
         >
           <Eraser size={16} className="mr-2" />
           {t.modeEraser}
         </button>
+        <button
+          onClick={() => setMode('remove-bg')}
+          disabled={isGenerating}
+          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
+            mode === 'remove-bg' 
+              ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20' 
+              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Scissors size={16} className="mr-2" />
+          {t.modeRemoveBg}
+        </button>
+        <button
+          onClick={() => setMode('pencil-sketch')}
+          disabled={isGenerating}
+          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
+            mode === 'pencil-sketch' 
+              ? 'bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-600/20' 
+              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Pencil size={16} className="mr-2" />
+          {t.modePencil}
+        </button>
       </div>
-
-      <button
-        onClick={() => setMode('remove-bg')}
-        disabled={isGenerating}
-        className={`w-full flex items-center justify-between py-4 px-5 rounded-2xl border transition-all duration-300 group ${
-          mode === 'remove-bg' 
-            ? 'bg-emerald-600 text-white border-emerald-500 shadow-xl shadow-emerald-600/30' 
-            : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800 hover:border-white/10'
-        }`}
-      >
-        <div className="flex items-center">
-          <Scissors size={18} className="mr-3" />
-          <span className="text-sm font-bold uppercase tracking-widest">{t.modeRemoveBg}</span>
-        </div>
-        {mode !== 'remove-bg' && <ChevronRight size={16} className="text-slate-600 group-hover:text-white transition-colors" />}
-      </button>
 
       {/* Image Uploads */}
       <div className="flex gap-4">
-        {mode === 'generate' ? (
+        {mode === 'generate' || mode === 'video' ? (
           <>
             {renderImageUpload(1, referenceImage1Preview, t.refImage1, t.uploadGenHint)}
-            {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
+            {mode === 'generate' && renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
           </>
         ) : (
           <div className="w-full">
              {renderImageUpload(1, referenceImage1Preview, 
-               mode === 'erase' ? t.uploadImageRequired : t.uploadRemoveBgRequired,
-               mode === 'erase' ? t.uploadEraserHint : t.uploadRemoveBgHint
+               mode === 'erase' ? t.uploadImageRequired : (mode === 'remove-bg' ? t.uploadRemoveBgRequired : t.uploadImageRequired),
+               mode === 'erase' ? t.uploadEraserHint : (mode === 'remove-bg' ? t.uploadRemoveBgHint : t.uploadPencilHint)
              )}
           </div>
         )}
       </div>
 
       {/* Inputs Logic */}
-      {mode === 'generate' ? (
-        <div className="space-y-3">
-          <label htmlFor="prompt" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
-            {t.describeImagination}
-          </label>
-          <textarea
-            id="prompt"
-            rows={4}
-            className="w-full bg-slate-900 border border-white/5 rounded-2xl p-5 text-sm text-white placeholder-slate-800 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all resize-none shadow-inner"
-            placeholder={t.promptPlaceholderGen}
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            disabled={isGenerating}
-          />
-        </div>
-      ) : (
-        <div className={`border rounded-[1.5rem] p-5 flex items-start gap-4 transition-colors ${
-            mode === 'erase' ? 'bg-rose-500/5 border-rose-500/20' : 'bg-emerald-500/5 border-emerald-500/20'
-        }`}>
-          {mode === 'erase' ? (
-             <Wand2 className="w-6 h-6 text-rose-500 mt-1 shrink-0" />
-          ) : (
-             <Scissors size={22} className="text-emerald-500 mt-1 shrink-0" />
-          )}
-          <div className="space-y-1">
-            <p className={`text-xs font-black uppercase tracking-widest ${mode === 'erase' ? 'text-rose-400' : 'text-emerald-400'}`}>
-              {mode === 'erase' ? t.magicEraserActive : t.magicRemoveBgActive}
-            </p>
-            <p className="text-[11px] leading-relaxed text-slate-500 font-medium">
-              {mode === 'erase' ? t.magicEraserDesc : t.magicRemoveBgDesc}
-            </p>
-          </div>
-        </div>
-      )}
-
-      {mode === 'erase' && (
-        <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-500">
-           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">Instructions for Eraser</label>
-           <textarea
-            value={prompt}
-            onChange={(e) => setPrompt(e.target.value)}
-            className="w-full bg-slate-900 border border-white/5 rounded-2xl p-4 text-sm focus:ring-2 focus:ring-rose-500/50 outline-none transition-all resize-none"
-            placeholder="e.g. Remove the person in the background..."
-          />
-        </div>
-      )}
+      <div className="space-y-3">
+        <label htmlFor="prompt" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+          {t.describeImagination}
+        </label>
+        <textarea
+          id="prompt"
+          rows={4}
+          className="w-full bg-slate-900 border border-white/5 rounded-2xl p-5 text-sm text-white placeholder-slate-800 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all resize-none shadow-inner"
+          placeholder={mode === 'video' ? t.promptPlaceholderVideo : t.promptPlaceholderGen}
+          value={prompt}
+          onChange={(e) => setPrompt(e.target.value)}
+          disabled={isGenerating || mode === 'remove-bg' || mode === 'pencil-sketch'}
+        />
+        {(mode === 'remove-bg' || mode === 'pencil-sketch') && (
+           <p className="text-[10px] text-indigo-400/80 font-medium italic">
+             {mode === 'remove-bg' ? t.magicRemoveBgDesc : t.magicPencilDesc}
+           </p>
+        )}
+      </div>
 
       {/* Style & Ratio Grid */}
       <div className="grid grid-cols-2 gap-6">
@@ -246,10 +246,22 @@ export const Controls: React.FC<ControlsProps> = ({
            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
             {t.resolutionQuality}
           </label>
-          <div className="flex items-center gap-2 p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-indigo-400">
-             <Zap size={16} className="fill-indigo-500" />
-             <span className="text-[9px] font-black uppercase tracking-[0.2em]">NanoBanana 1K</span>
-          </div>
+          {mode === 'video' ? (
+            <select
+              value={videoResolution}
+              onChange={(e) => setVideoResolution(e.target.value as VideoResolution)}
+              disabled={isGenerating}
+              className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-purple-500/50 outline-none cursor-pointer hover:bg-slate-800 transition-all"
+            >
+              <option value="720p">HD (720p)</option>
+              <option value="1080p">Full HD (1080p)</option>
+            </select>
+          ) : (
+            <div className="flex items-center gap-2 p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-indigo-400">
+               <Zap size={16} className="fill-indigo-500" />
+               <span className="text-[9px] font-black uppercase tracking-[0.2em]">NanoBanana 1K</span>
+            </div>
+          )}
         </div>
 
         <div className="space-y-4 col-span-2">
@@ -257,35 +269,37 @@ export const Controls: React.FC<ControlsProps> = ({
             {t.aspectRatio}
           </label>
           <div className="grid grid-cols-5 gap-3">
-            {Object.entries(AspectRatio).map(([key, value]) => {
-              let h = '14px';
-              if (value === '1:1') h = '14px';
-              else if (value === '4:5') h = '18px';
-              else if (value === '3:4') h = '20px';
-              else if (value === '16:9') h = '8px';
-              else if (value === '9:16') h = '24px';
+            {Object.entries(AspectRatio)
+              .filter(([_, value]) => mode !== 'video' || (value === '16:9' || value === '9:16' || value === '1:1'))
+              .map(([key, value]) => {
+                let h = '14px';
+                if (value === '1:1') h = '14px';
+                else if (value === '4:5') h = '18px';
+                else if (value === '3:4') h = '20px';
+                else if (value === '16:9') h = '8px';
+                else if (value === '9:16') h = '24px';
 
-              return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => setAspectRatio(value)}
-                  disabled={isGenerating}
-                  className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all h-16 ${
-                    aspectRatio === value
-                      ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-600/10'
-                      : 'bg-slate-900 border-white/5 text-slate-600 hover:border-white/20 hover:text-slate-300'
-                  }`}
-                  title={value}
-                >
-                  <div 
-                    className="border border-current rounded-[1px] mb-1.5 opacity-60"
-                    style={{ width: '14px', height: h }} 
-                  />
-                  <span className="text-[9px] font-black">{value}</span>
-                </button>
-              );
-            })}
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setAspectRatio(value)}
+                    disabled={isGenerating}
+                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all h-16 ${
+                      aspectRatio === value
+                        ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-600/10'
+                        : 'bg-slate-900 border-white/5 text-slate-600 hover:border-white/20 hover:text-slate-300'
+                    }`}
+                    title={value}
+                  >
+                    <div 
+                      className="border border-current rounded-[1px] mb-1.5 opacity-60"
+                      style={{ width: '14px', height: h }} 
+                    />
+                    <span className="text-[9px] font-black">{value}</span>
+                  </button>
+                );
+              })}
           </div>
         </div>
       </div>
