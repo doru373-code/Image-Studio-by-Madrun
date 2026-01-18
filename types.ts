@@ -25,7 +25,12 @@ export enum ArtStyle {
   Cartoon = "Cartoon"
 }
 
-export type ImageResolution = "1K";
+export enum ImageModel {
+  Flash = "gemini-2.5-flash-image",
+  Pro = "gemini-3-pro-image-preview"
+}
+
+export type ImageResolution = "1K" | "2K" | "4K";
 export type VideoResolution = "720p" | "1080p";
 
 export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'video' | 'pencil-sketch';

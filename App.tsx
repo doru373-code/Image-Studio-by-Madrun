@@ -2,7 +2,7 @@
 import React, { useState, useCallback, useMemo } from 'react';
 import { Palette, Key, Sparkles, RefreshCcw } from 'lucide-react';
 import { generateImage, generateVideo } from './services/geminiService';
-import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution } from './types';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution, ImageModel } from './types';
 import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
   const [resolution, setResolution] = useState<ImageResolution>("1K");
   const [videoResolution, setVideoResolution] = useState<VideoResolution>("720p");
+  const [imageModel, setImageModel] = useState<ImageModel>(ImageModel.Flash);
   
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -74,6 +75,49 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const handleUpscale = useCallback(async () => {
+    if (!resultUrl) return;
+
+    if (window.aistudio) {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await window.aistudio.openSelectKey();
+      }
+    }
+
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // Get base64 data from current resultUrl
+      const response = await fetch(resultUrl);
+      const blob = await response.blob();
+      const reader = new FileReader();
+      const base64DataPromise = new Promise<string>((resolve) => {
+        reader.onloadend = () => {
+          const base64 = (reader.result as string).split(',')[1];
+          resolve(base64);
+        };
+      });
+      reader.readAsDataURL(blob);
+      const base64Data = await base64DataPromise;
+
+      const upscaledImage = await generateImage(
+        prompt || "Maintain character and structural consistency while upscaling to ultra-high 4K definition.",
+        aspectRatio,
+        "4K",
+        ImageModel.Pro,
+        { data: base64Data, mimeType: blob.type }
+      );
+      setResultUrl(upscaledImage);
+    } catch (err: any) {
+      console.error("Upscale Error:", err);
+      setError(err.message || t.errorGeneric);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [resultUrl, prompt, aspectRatio, t]);
+
   const handleGenerate = useCallback(async () => {
     if ((mode === 'generate' || mode === 'video') && !prompt.trim() && !refImage1) {
       setError(t.promptPlaceholder);
@@ -84,7 +128,8 @@ const App: React.FC = () => {
       return;
     }
 
-    if (mode === 'video' && window.aistudio) {
+    // Trigger API key selection for mandatory Pro/Veo usage
+    if ((mode === 'video' || imageModel === ImageModel.Pro) && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
         await window.aistudio.openSelectKey();
@@ -111,7 +156,7 @@ const App: React.FC = () => {
         } else if (mode === 'erase') {
           finalPrompt = `Modify this image according to this instruction: ${prompt}. Execute the change professionally while maintaining the original style and lighting.`;
         } else if (mode === 'pencil-sketch') {
-          finalPrompt = "Redraw this image as a professional hand-drawn pencil sketch. Use graphite pencil art style, realistic shading, fine lines, artistic paper texture. Output a monochromatic graphite masterpiece.";
+          finalPrompt = "Redraw this image as a professional hand-drawn pencil sketch. STRICTLY BLACK AND WHITE AND GREYSCALE. NO COLOR ALLOWED. Use only graphite shades, charcoal textures, and fine lines on a clean white paper texture. A monochromatic masterpiece in shades of grey.";
         } else {
           finalPrompt = `${STYLE_PROMPTS[style] ? STYLE_PROMPTS[style] + ', ' : ''}${prompt}`;
         }
@@ -120,6 +165,7 @@ const App: React.FC = () => {
           finalPrompt,
           aspectRatio,
           resolution,
+          imageModel,
           refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined
         );
         setResultUrl(image);
@@ -143,7 +189,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, refImage1, style, aspectRatio, resolution, videoResolution, mode, t]);
+  }, [prompt, refImage1, style, aspectRatio, resolution, videoResolution, mode, imageModel, t]);
 
   if (!userEmail) return <Login t={t} onLogin={handleLogin} />;
 
@@ -181,6 +227,7 @@ const App: React.FC = () => {
             aspectRatio={aspectRatio} setAspectRatio={setAspectRatio}
             resolution={resolution} setResolution={setResolution}
             videoResolution={videoResolution} setVideoResolution={setVideoResolution}
+            imageModel={imageModel} setImageModel={setImageModel}
             isGenerating={isLoading} onGenerate={handleGenerate}
             referenceImage1Preview={refImage1?.preview || null} referenceImage2Preview={refImage2?.preview || null} referenceImage3Preview={null} referenceVideoName={null}
             onReferenceImageSelect={onReferenceImageSelect} onClearReferenceImage={(slot) => slot === 1 ? setRefImage1(null) : setRefImage2(null)}
@@ -194,8 +241,9 @@ const App: React.FC = () => {
               disabled={isLoading}
               className={`w-full py-5 rounded-3xl font-black text-sm tracking-[0.2em] shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${
                 mode === 'video' ? 'bg-gradient-to-r from-purple-600 to-indigo-600 shadow-purple-600/20' : 
-                mode === 'generate' ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-600/20' : 
-                mode === 'remove-bg' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/20' : 
+                imageModel === ImageModel.Pro ? 'bg-gradient-to-r from-indigo-600 to-purple-600 shadow-indigo-600/20' :
+                mode === 'generate' ? 'bg-gradient-to-r from-emerald-600 to-teal-600 shadow-emerald-600/20' : 
+                mode === 'remove-bg' ? 'bg-gradient-to-r from-cyan-600 to-blue-600 shadow-cyan-600/20' : 
                 mode === 'pencil-sketch' ? 'bg-gradient-to-r from-amber-600 to-orange-600 shadow-amber-600/20' :
                 'bg-gradient-to-r from-rose-600 to-pink-600 shadow-rose-600/20'
               }`}
@@ -210,6 +258,7 @@ const App: React.FC = () => {
           <ImageDisplay 
             t={t} imageUrl={resultUrl} isLoading={isLoading} error={error} 
             isVideo={mode === 'video'} aspectRatio={aspectRatio} onUpdateImage={(url) => setResultUrl(url)} 
+            onUpscale={handleUpscale}
           />
         </div>
       </main>

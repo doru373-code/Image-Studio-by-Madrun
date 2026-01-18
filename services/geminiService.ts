@@ -1,11 +1,12 @@
 
 import { GoogleGenAI } from "@google/genai";
-import { AspectRatio, ImageResolution, VideoResolution } from "../types";
+import { AspectRatio, ImageResolution, VideoResolution, ImageModel } from "../types";
 
 export const generateImage = async (
   prompt: string,
   aspectRatio: AspectRatio,
   resolution: ImageResolution,
+  model: ImageModel,
   referenceImage?: { data: string; mimeType: string }
 ): Promise<string> => {
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
@@ -24,14 +25,21 @@ export const generateImage = async (
   // Map "A4" to "3:4" as it is the closest valid Gemini API vertical ratio
   const apiRatio = (aspectRatio as string) === "A4" ? "3:4" : aspectRatio;
 
+  const imageConfig: any = {
+    aspectRatio: apiRatio as any
+  };
+
+  // Only gemini-3-pro-image-preview supports imageSize (1K, 2K, 4K)
+  if (model === ImageModel.Pro) {
+    imageConfig.imageSize = resolution;
+  }
+
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: model,
       contents: { parts: parts },
       config: {
-        imageConfig: {
-          aspectRatio: apiRatio as any
-        }
+        imageConfig: imageConfig
       },
     });
 

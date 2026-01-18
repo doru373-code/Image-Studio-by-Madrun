@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Upload, X, Image as ImageIcon, Zap, Eraser, Palette, Wand2, Scissors, ChevronRight, Video, Pencil } from 'lucide-react';
-import { AspectRatio, ArtStyle, ImageResolution, AppMode, VideoResolution } from '../types';
+import { Upload, X, Image as ImageIcon, Zap, Eraser, Palette, Wand2, Scissors, ChevronRight, Video, Pencil, Cpu, Sparkles } from 'lucide-react';
+import { AspectRatio, ArtStyle, ImageResolution, AppMode, VideoResolution, ImageModel } from '../types';
 import { translations } from '../translations';
 
 interface ControlsProps {
@@ -16,6 +16,8 @@ interface ControlsProps {
   setResolution: (value: ImageResolution) => void;
   videoResolution: VideoResolution;
   setVideoResolution: (value: VideoResolution) => void;
+  imageModel: ImageModel;
+  setImageModel: (value: ImageModel) => void;
   isGenerating: boolean;
   onGenerate: () => void;
   referenceImage1Preview: string | null;
@@ -41,8 +43,12 @@ export const Controls: React.FC<ControlsProps> = ({
   setStyle,
   aspectRatio,
   setAspectRatio,
+  resolution,
+  setResolution,
   videoResolution,
   setVideoResolution,
+  imageModel,
+  setImageModel,
   isGenerating,
   referenceImage1Preview,
   referenceImage2Preview,
@@ -181,6 +187,41 @@ export const Controls: React.FC<ControlsProps> = ({
         </button>
       </div>
 
+      {/* Engine Selection */}
+      {(mode !== 'video') && (
+        <div className="space-y-3">
+          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
+            {t.modelLabel}
+          </label>
+          <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900 rounded-2xl border border-white/5">
+            <button
+              onClick={() => setImageModel(ImageModel.Flash)}
+              disabled={isGenerating}
+              className={`flex items-center justify-center py-2.5 px-2 text-[10px] font-black rounded-xl transition-all ${
+                imageModel === ImageModel.Flash
+                  ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <Cpu size={14} className="mr-2" />
+              {t.modelFlash}
+            </button>
+            <button
+              onClick={() => setImageModel(ImageModel.Pro)}
+              disabled={isGenerating}
+              className={`flex items-center justify-center py-2.5 px-2 text-[10px] font-black rounded-xl transition-all ${
+                imageModel === ImageModel.Pro
+                  ? 'bg-indigo-950 text-indigo-400 border border-indigo-500/30'
+                  : 'text-slate-500 hover:text-slate-300'
+              }`}
+            >
+              <Sparkles size={14} className="mr-2" />
+              {t.modelPro}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Image Uploads */}
       <div className="flex gap-4">
         {mode === 'generate' || mode === 'video' ? (
@@ -257,10 +298,20 @@ export const Controls: React.FC<ControlsProps> = ({
               <option value="1080p">Full HD (1080p)</option>
             </select>
           ) : (
-            <div className="flex items-center gap-2 p-3 bg-indigo-500/5 border border-indigo-500/20 rounded-xl text-indigo-400">
-               <Zap size={16} className="fill-indigo-500" />
-               <span className="text-[9px] font-black uppercase tracking-[0.2em]">NanoBanana 1K</span>
-            </div>
+            <select
+              value={resolution}
+              onChange={(e) => setResolution(e.target.value as ImageResolution)}
+              disabled={isGenerating}
+              className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer hover:bg-slate-800 transition-all"
+            >
+              <option value="1K">1K Standard</option>
+              {imageModel === ImageModel.Pro && (
+                <>
+                  <option value="2K">2K High Def</option>
+                  <option value="4K">4K Ultra Def</option>
+                </>
+              )}
+            </select>
           )}
         </div>
 
