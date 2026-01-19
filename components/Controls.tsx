@@ -319,7 +319,7 @@ export const Controls: React.FC<ControlsProps> = ({
           <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
             {t.aspectRatio}
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-3 sm:grid-cols-7 gap-2">
             {Object.entries(AspectRatio)
               .filter(([_, value]) => mode !== 'video' || (value === '16:9' || value === '9:16' || value === '1:1'))
               .map(([key, value]) => {
@@ -329,7 +329,8 @@ export const Controls: React.FC<ControlsProps> = ({
                 else if (value === '3:4') h = '20px';
                 else if (value === '16:9') h = '8px';
                 else if (value === '9:16') h = '24px';
-                else if (value === 'A4') h = '21px'; // A4 specific height for icon
+                else if (value === 'A4') h = '21px';
+                else if (value === '8.5:11') h = '19px';
 
                 return (
                   <button
@@ -337,7 +338,7 @@ export const Controls: React.FC<ControlsProps> = ({
                     type="button"
                     onClick={() => setAspectRatio(value)}
                     disabled={isGenerating}
-                    className={`flex flex-col items-center justify-center p-3 rounded-xl border transition-all h-16 ${
+                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all h-16 ${
                       aspectRatio === value
                         ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-600/10'
                         : 'bg-slate-900 border-white/5 text-slate-600 hover:border-white/20 hover:text-slate-300'
@@ -348,7 +349,7 @@ export const Controls: React.FC<ControlsProps> = ({
                       className="border border-current rounded-[1px] mb-1.5 opacity-60"
                       style={{ width: '14px', height: h }} 
                     />
-                    <span className="text-[9px] font-black">{value}</span>
+                    <span className="text-[8px] font-black">{value}</span>
                   </button>
                 );
               })}

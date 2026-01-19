@@ -105,47 +105,17 @@ export const Pricing: React.FC<PricingProps> = ({ t, userEmail, onClose, onSubsc
           </div>
 
           <div className="grid md:grid-cols-3 gap-8 mb-24">
-            {/* Free Plan */}
-            <div className="relative flex flex-col p-8 rounded-3xl bg-slate-900/50 border border-slate-800 backdrop-blur-sm transition-all hover:border-slate-700">
-              <div className="mb-8">
-                <h3 className="text-xl font-bold text-white mb-2">Free</h3>
-                <div className="text-3xl font-bold text-slate-200">$0<span className="text-sm font-normal text-slate-500 ml-1">/ forever</span></div>
-                <p className="text-slate-500 text-sm mt-2">Perfect for trying out our basic features.</p>
-              </div>
-
-              <ul className="space-y-4 mb-8 flex-1">
-                <li className="flex items-start gap-3 text-sm text-slate-300">
-                  <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                  Standard Quality Images
-                </li>
-                <li className="flex items-start gap-3 text-sm text-slate-300">
-                  <Check size={18} className="text-emerald-500 shrink-0 mt-0.5" />
-                  Single Ref Image Support
-                </li>
-                <li className="flex items-start gap-3 text-sm text-slate-500 line-through decoration-slate-700">
-                  Veo Video Generation
-                </li>
-                <li className="flex items-start gap-3 text-sm text-slate-500 line-through decoration-slate-700">
-                  Character Cloning
-                </li>
-              </ul>
-
-              <div className="w-full py-3 rounded-xl font-bold text-center border border-slate-800 bg-slate-800/50 text-slate-400 cursor-default">
-                {currentPlan === 'free' ? t.active : 'Current Plan'}
-              </div>
-            </div>
-
             {/* Trial Plan */}
             <div className={`relative flex flex-col p-8 rounded-3xl border transition-all hover:scale-[1.02] duration-300 ${
               currentPlan === 'trial' ? 'bg-indigo-900/10 border-indigo-500' : 'bg-slate-900/50 border-slate-800'
             }`}>
               <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-500/20 text-indigo-400 text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full border border-indigo-500/30">
-                Quick Start
+                {t.trialDays} Access
               </div>
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-white mb-2">{t.trialPlan}</h3>
-                <div className="text-3xl font-bold text-indigo-400">{t.trialPrice}<span className="text-sm font-normal text-slate-500 ml-1">/ 7 days</span></div>
-                <p className="text-slate-500 text-sm mt-2">Test drive our most powerful creative tools.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Kickstart</h3>
+                <div className="text-3xl font-bold text-indigo-400">{t.trialPrice}</div>
+                <p className="text-slate-500 text-sm mt-2">Test drive our most powerful creative tools for {t.trialDays}.</p>
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">
@@ -158,7 +128,7 @@ export const Pricing: React.FC<PricingProps> = ({ t, userEmail, onClose, onSubsc
               </ul>
 
               <button
-                onClick={() => handlePlanSelect('trial', '$3.00', 3)}
+                onClick={() => handlePlanSelect('trial', 'Trial', 0)}
                 disabled={currentPlan !== 'free'}
                 className={`w-full py-4 rounded-xl font-bold transition-all shadow-xl ${
                   currentPlan === 'trial' 
@@ -166,26 +136,49 @@ export const Pricing: React.FC<PricingProps> = ({ t, userEmail, onClose, onSubsc
                     : 'bg-white text-black hover:bg-slate-200'
                 }`}
               >
-                {currentPlan === 'trial' ? t.active : t.startTrial}
+                {currentPlan === 'trial' ? t.ready : t.startTrialBtn}
               </button>
             </div>
 
-            {/* Pro Plan */}
-            <div className={`relative flex flex-col p-8 rounded-3xl border transition-all ring-4 ring-indigo-500/10 hover:scale-[1.02] duration-300 ${
-              currentPlan === 'pro' ? 'bg-indigo-950 border-indigo-500' : 'bg-indigo-600/5 border-indigo-500/30'
-            }`}>
-              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
-                Most Popular
-              </div>
+            {/* Monthly Plan */}
+            <div className={`relative flex flex-col p-8 rounded-3xl border transition-all hover:scale-[1.02] duration-300 bg-slate-900/50 border-slate-800`}>
               <div className="mb-8">
-                <h3 className="text-xl font-bold text-white mb-2">{t.proPlan}</h3>
-                <div className="text-3xl font-bold text-white">{t.monthlyPrice}</div>
-                <p className="text-slate-400 text-sm mt-2">Unlock the full power of Gemini and Veo.</p>
+                <h3 className="text-xl font-bold text-white mb-2">{t.monthlyPlan}</h3>
+                <div className="text-3xl font-bold text-white">{t.monthlyPrice}<span className="text-sm font-normal text-slate-500 ml-1">/ month</span></div>
+                <p className="text-slate-400 text-sm mt-2">Perfect for creators who want flexibility.</p>
               </div>
 
               <ul className="space-y-4 mb-8 flex-1">
                 {featuresList.map((f, i) => (
-                  <li key={i} className="flex items-start gap-3 text-sm text-slate-200 font-medium">
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-200">
+                    <Check size={18} className="text-indigo-500 shrink-0 mt-0.5" />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+
+              <button
+                onClick={() => handlePlanSelect('pro', t.monthlyPrice, 19)}
+                className="w-full py-4 rounded-xl font-bold transition-all bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-600/20"
+              >
+                Get Started
+              </button>
+            </div>
+
+            {/* Yearly Plan */}
+            <div className={`relative flex flex-col p-8 rounded-3xl border transition-all ring-4 ring-indigo-500/10 hover:scale-[1.02] duration-300 bg-indigo-950 border-indigo-500`}>
+              <div className="absolute -top-4 left-1/2 -translate-x-1/2 bg-indigo-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-1.5 rounded-full shadow-lg">
+                {t.saveYearly}
+              </div>
+              <div className="mb-8">
+                <h3 className="text-xl font-bold text-white mb-2">{t.yearlyPlan}</h3>
+                <div className="text-3xl font-bold text-white">{t.yearlyPrice}<span className="text-sm font-normal text-slate-300 ml-1">/ year</span></div>
+                <p className="text-slate-300 text-sm mt-2">The best value for professional artists.</p>
+              </div>
+
+              <ul className="space-y-4 mb-8 flex-1">
+                {featuresList.map((f, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm text-slate-100 font-medium">
                     <Zap size={18} className="text-indigo-400 shrink-0 mt-0.5 fill-indigo-400" />
                     {f}
                   </li>
@@ -193,61 +186,13 @@ export const Pricing: React.FC<PricingProps> = ({ t, userEmail, onClose, onSubsc
               </ul>
 
               <button
-                onClick={() => handlePlanSelect('pro', '$15.00', 15)}
-                disabled={currentPlan === 'pro'}
-                className={`w-full py-4 rounded-xl font-bold transition-all shadow-2xl ${
-                  currentPlan === 'pro' 
-                    ? 'bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 cursor-default' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-500/20'
-                }`}
+                onClick={() => handlePlanSelect('pro', t.yearlyPrice, 67)}
+                className="w-full py-4 rounded-xl font-bold transition-all bg-white text-black hover:bg-slate-200 shadow-2xl"
               >
-                {currentPlan === 'pro' ? t.active : t.getStarted}
+                Go Yearly
               </button>
-              <p className="text-center text-[10px] text-slate-500 mt-4 font-medium uppercase tracking-widest">{t.cancelAnytime}</p>
+              <p className="text-center text-[10px] text-slate-500 mt-4 font-medium uppercase tracking-widest">Cancel anytime</p>
             </div>
-          </div>
-
-          {/* Comparison Table */}
-          <div className="mb-24 animate-in fade-in slide-in-from-bottom-8 duration-700">
-             <h3 className="text-2xl font-bold text-white mb-8 text-center">Compare features</h3>
-             <div className="bg-slate-900/50 border border-slate-800 rounded-3xl overflow-hidden backdrop-blur-sm">
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="border-b border-slate-800">
-                      <th className="px-6 py-5 text-sm font-bold text-slate-400 uppercase tracking-widest">Features</th>
-                      <th className="px-6 py-5 text-sm font-bold text-slate-200">Free</th>
-                      <th className="px-6 py-5 text-sm font-bold text-indigo-400">Trial</th>
-                      <th className="px-6 py-5 text-sm font-bold text-white bg-indigo-500/10">Pro</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800">
-                    <tr>
-                      <td className="px-6 py-4 text-sm text-slate-300">Daily Generations</td>
-                      <td className="px-6 py-4 text-sm text-slate-400">5 images</td>
-                      <td className="px-6 py-4 text-sm text-slate-200">50 images</td>
-                      <td className="px-6 py-4 text-sm text-white bg-indigo-500/10">Unlimited</td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 text-sm text-slate-300">Character Cloning (Veo)</td>
-                      <td className="px-6 py-4 text-sm text-slate-400"><X size={16} className="text-slate-600" /></td>
-                      <td className="px-6 py-4 text-sm text-indigo-400"><Check size={16} /></td>
-                      <td className="px-6 py-4 text-sm text-white bg-indigo-500/10"><Check size={16} /></td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 text-sm text-slate-300">Gemini 3.0 Pro (4K)</td>
-                      <td className="px-6 py-4 text-sm text-slate-400"><X size={16} className="text-slate-600" /></td>
-                      <td className="px-6 py-4 text-sm text-slate-400"><X size={16} className="text-slate-600" /></td>
-                      <td className="px-6 py-4 text-sm text-white bg-indigo-500/10"><Check size={16} /></td>
-                    </tr>
-                    <tr>
-                      <td className="px-6 py-4 text-sm text-slate-300">Commercial License</td>
-                      <td className="px-6 py-4 text-sm text-slate-400"><X size={16} className="text-slate-600" /></td>
-                      <td className="px-6 py-4 text-sm text-slate-400"><X size={16} className="text-slate-600" /></td>
-                      <td className="px-6 py-4 text-sm text-white bg-indigo-500/10"><Check size={16} /></td>
-                    </tr>
-                  </tbody>
-                </table>
-             </div>
           </div>
 
           {/* FAQ Section */}
@@ -262,29 +207,18 @@ export const Pricing: React.FC<PricingProps> = ({ t, userEmail, onClose, onSubsc
               ))}
             </div>
           </div>
-
-          {/* Trust Badge */}
-          <div className="flex flex-col items-center gap-6 text-center text-slate-500 pb-12">
-            <div className="flex items-center gap-3 px-6 py-3 bg-slate-900 border border-slate-800 rounded-full">
-              <ShieldCheck className="text-emerald-500" size={20} />
-              <span className="text-xs font-bold uppercase tracking-widest">Secure 256-bit encrypted checkout</span>
-            </div>
-            <p className="text-xs max-w-lg">
-              Payments are processed securely via Stripe. We do not store your credit card information.
-            </p>
-          </div>
         </div>
       </div>
 
       {checkoutData && (
         <StripeCheckout 
           email={userEmail}
-          plan={checkoutData.plan === 'pro' ? 'Pro Plan' : 'Trial'}
+          plan={checkoutData.plan}
           price={checkoutData.price}
           amount={checkoutData.amount}
           onClose={() => setCheckoutData(null)}
           onSuccess={() => {
-            onSubscribe(checkoutData.plan);
+            onSubscribe(checkoutData.plan as any);
             setCheckoutData(null);
           }}
         />

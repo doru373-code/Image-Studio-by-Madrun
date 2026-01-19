@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Palette, Key, Sparkles, RefreshCcw } from 'lucide-react';
 import { generateImage, generateVideo } from './services/geminiService';
 import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution, ImageModel } from './types';
@@ -7,6 +7,7 @@ import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
 import { Login } from './components/Login';
+import { LandingPage } from './components/LandingPage';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
@@ -29,6 +30,8 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ro');
   const [mode, setMode] = useState<AppMode>('generate');
   const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('studio-user-email'));
+  const [showLanding, setShowLanding] = useState(!localStorage.getItem('studio-user-email'));
+  const [showLogin, setShowLogin] = useState(false);
   
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
@@ -49,11 +52,14 @@ const App: React.FC = () => {
   const handleLogin = (email: string) => {
     setUserEmail(email);
     localStorage.setItem('studio-user-email', email);
+    setShowLogin(false);
+    setShowLanding(false);
   };
 
   const handleLogout = () => {
     setUserEmail(null);
     localStorage.removeItem('studio-user-email');
+    setShowLanding(true);
   };
 
   const handleApiKeyFix = async () => {
@@ -89,7 +95,6 @@ const App: React.FC = () => {
     setError(null);
 
     try {
-      // Get base64 data from current resultUrl
       const response = await fetch(resultUrl);
       const blob = await response.blob();
       const reader = new FileReader();
@@ -128,7 +133,6 @@ const App: React.FC = () => {
       return;
     }
 
-    // Trigger API key selection for mandatory Pro/Veo usage
     if ((mode === 'video' || imageModel === ImageModel.Pro) && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
@@ -191,7 +195,34 @@ const App: React.FC = () => {
     }
   }, [prompt, refImage1, style, aspectRatio, resolution, videoResolution, mode, imageModel, t]);
 
-  if (!userEmail) return <Login t={t} onLogin={handleLogin} />;
+  if (showLanding && !userEmail) {
+    return (
+      <LandingPage 
+        t={t} 
+        onProceed={() => setShowLogin(true)} 
+        onLangChange={setLang} 
+        currentLang={lang} 
+      />
+    );
+  }
+
+  if (showLogin && !userEmail) {
+    return (
+      <div className="relative">
+        <button 
+          onClick={() => setShowLogin(false)} 
+          className="fixed top-8 left-8 z-[300] flex items-center gap-2 text-slate-400 hover:text-white transition-colors"
+        >
+          <refreshCcw size={16} /> Back
+        </button>
+        <Login t={t} onLogin={handleLogin} />
+      </div>
+    );
+  }
+
+  if (!userEmail) {
+    return <Login t={t} onLogin={handleLogin} />;
+  }
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-indigo-500/30">

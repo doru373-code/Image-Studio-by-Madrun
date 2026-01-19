@@ -52,7 +52,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   const [isFullSizeOpen, setIsFullSizeOpen] = useState(false);
   const [editSettings, setEditSettings] = useState<EditSettings>(DEFAULT_SETTINGS);
 
-  const isPortrait = aspectRatio === AspectRatio.Ratio9_16 || aspectRatio === AspectRatio.Ratio3_4 || aspectRatio === AspectRatio.Ratio4_5;
+  const isPortrait = aspectRatio === AspectRatio.Ratio9_16 || aspectRatio === AspectRatio.Ratio3_4 || aspectRatio === AspectRatio.Ratio4_5 || aspectRatio === AspectRatio.RatioA4 || aspectRatio === AspectRatio.Ratio8_5_11;
 
   const handleDownload = () => {
     if (imageUrl) {
@@ -80,6 +80,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
     
     setIsPdfGenerating(true);
     try {
+      // Create PDF in Letter format (8.5 x 11 inches)
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter', compress: false });
       const img = new Image();
       img.src = imageUrl;
@@ -121,7 +122,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
 
   return (
     <>
-      <div className={`relative w-full h-full min-h-[500px] bg-slate-900 rounded-3xl shadow-2xl flex flex-col items-center justify-center group overflow-hidden border border-white/5 transition-all duration-500 ${(isPortrait || aspectRatio === AspectRatio.RatioA4) && !isLoading ? 'lg:min-h-[750px]' : ''}`}>
+      <div className={`relative w-full h-full min-h-[500px] bg-slate-900 rounded-3xl shadow-2xl flex flex-col items-center justify-center group overflow-hidden border border-white/5 transition-all duration-500 ${isPortrait && !isLoading ? 'lg:min-h-[750px]' : ''}`}>
         {isLoading || isUpscaling ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="relative w-24 h-24 mb-8">
@@ -137,7 +138,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </div>
         ) : imageUrl ? (
           <>
-            <div className={`w-full flex-1 flex items-center justify-center overflow-hidden transition-all duration-500 ${(isPortrait || aspectRatio === AspectRatio.RatioA4) ? 'p-0' : 'p-6'}`}>
+            <div className={`w-full flex-1 flex items-center justify-center overflow-hidden transition-all duration-500 ${isPortrait ? 'p-0' : 'p-6'}`}>
               {isVideo ? (
                 <video 
                   ref={videoRef}
@@ -145,14 +146,14 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
                   controls
                   autoPlay
                   loop
-                  className={`rounded-2xl shadow-2xl border border-white/10 object-contain transition-all duration-500 ${(isPortrait || aspectRatio === AspectRatio.RatioA4) ? 'max-h-[85vh] w-auto h-full' : 'max-w-full max-h-[70vh]'}`}
+                  className={`rounded-2xl shadow-2xl border border-white/10 object-contain transition-all duration-500 ${isPortrait ? 'max-h-[85vh] w-auto h-full' : 'max-w-full max-h-[70vh]'}`}
                 />
               ) : (
                 <img 
                   ref={imgRef}
                   src={imageUrl} 
                   alt="Generated Art" 
-                  className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${(isPortrait || aspectRatio === AspectRatio.RatioA4) ? 'max-h-[85vh] h-full w-auto' : 'max-w-full max-h-[70vh]'}`}
+                  className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${isPortrait ? 'max-h-[85vh] h-full w-auto' : 'max-w-full max-h-[70vh]'}`}
                   style={{ filter: isEditing ? `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)` : 'none' }}
                   crossOrigin="anonymous"
                   onClick={() => setIsFullSizeOpen(true)}
@@ -236,9 +237,9 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
             <X size={24} />
           </button>
           {isVideo ? (
-            <video src={imageUrl} controls autoPlay className={`max-w-full max-h-screen shadow-2xl ${(isPortrait || aspectRatio === AspectRatio.RatioA4) ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
+            <video src={imageUrl} controls autoPlay className={`max-w-full max-h-screen shadow-2xl ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
           ) : (
-            <img src={imageUrl} alt="Full Size" className={`max-w-full max-h-screen object-contain drop-shadow-2xl animate-in zoom-in-95 ${(isPortrait || aspectRatio === AspectRatio.RatioA4) ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
+            <img src={imageUrl} alt="Full Size" className={`max-w-full max-h-screen object-contain drop-shadow-2xl animate-in zoom-in-95 ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
           )}
         </div>
       )}

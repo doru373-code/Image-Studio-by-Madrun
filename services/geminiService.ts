@@ -22,8 +22,11 @@ export const generateImage = async (
   }
   parts.push({ text: prompt });
 
-  // Map "A4" to "3:4" as it is the closest valid Gemini API vertical ratio
-  const apiRatio = (aspectRatio as string) === "A4" ? "3:4" : aspectRatio;
+  // Map non-standard ratios to closest valid Gemini API ratios
+  let apiRatio: string = aspectRatio;
+  if (aspectRatio === AspectRatio.RatioA4 || aspectRatio === AspectRatio.Ratio8_5_11) {
+    apiRatio = "3:4";
+  }
 
   const imageConfig: any = {
     aspectRatio: apiRatio as any
