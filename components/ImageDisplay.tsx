@@ -1,9 +1,9 @@
 
 import React, { useRef, useState } from 'react';
-import { Download, Maximize2, Edit3, Save, X, RotateCcw, Sliders, FileText, Loader2, Play, Sparkles } from 'lucide-react';
+import { Download, Maximize2, Edit3, Save, X, RotateCcw, Sliders, FileText, Loader2, Play, Sparkles, History, Trash2 } from 'lucide-react';
 import { translations } from '../translations';
 import { jsPDF } from 'jspdf';
-import { AspectRatio } from '../types';
+import { AspectRatio, HistoryEntry } from '../types';
 
 interface ImageDisplayProps {
   t: typeof translations.en;
@@ -14,6 +14,8 @@ interface ImageDisplayProps {
   aspectRatio?: AspectRatio;
   onUpdateImage?: (newUrl: string) => void;
   onUpscale?: () => Promise<void>;
+  history?: HistoryEntry[];
+  onSelectFromHistory?: (item: HistoryEntry) => void;
 }
 
 interface EditSettings {
@@ -40,7 +42,9 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   isVideo,
   aspectRatio,
   onUpdateImage,
-  onUpscale
+  onUpscale,
+  history = [],
+  onSelectFromHistory
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
@@ -77,10 +81,8 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
 
   const handleDownloadPdf = async () => {
     if (!imageUrl || isVideo) return;
-    
     setIsPdfGenerating(true);
     try {
-      // Create PDF in Letter format (8.5 x 11 inches)
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter', compress: false });
       const img = new Image();
       img.src = imageUrl;
@@ -93,7 +95,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
       if (finalHeight > maxContentHeight) { finalHeight = maxContentHeight; finalWidth = finalHeight * ratio; }
       const x = (pageWidth - finalWidth) / 2, y = (pageHeight - finalHeight) / 2;
       pdf.addImage(imageUrl, 'PNG', x, y, finalWidth, finalHeight, undefined, 'FAST');
-      pdf.save(`image-studio-300dpi-${Date.now()}.pdf`);
+      pdf.save(`studio-300dpi-${Date.now()}.pdf`);
     } catch (err) { console.error("PDF Error:", err); } finally { setIsPdfGenerating(false); }
   };
 
@@ -121,13 +123,13 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   }
 
   return (
-    <>
-      <div className={`relative w-full h-full min-h-[500px] bg-slate-900 rounded-3xl shadow-2xl flex flex-col items-center justify-center group overflow-hidden border border-white/5 transition-all duration-500 ${isPortrait && !isLoading ? 'lg:min-h-[750px]' : ''}`}>
+    <div className="flex flex-col h-full gap-6 animate-in fade-in duration-700">
+      <div className={`relative w-full flex-1 min-h-[500px] bg-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center group overflow-hidden border border-white/5 transition-all duration-500 ${isPortrait && !isLoading ? 'lg:min-h-[700px]' : ''}`}>
         {isLoading || isUpscaling ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="relative w-24 h-24 mb-8">
               <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-indigo-500 rounded-full animate-spin border-t-transparent shadow-[0_0_20px_rgba(79,70,229,0.3)]"></div>
+              <div className="absolute inset-0 border-4 border-indigo-500 rounded-full animate-spin border-t-transparent shadow-[0_0_30px_rgba(79,70,229,0.3)]"></div>
             </div>
             <p className="text-xl font-black text-indigo-400 animate-pulse tracking-tight mb-2">
               {isUpscaling ? t.upscaling : (isVideo ? t.dreamingVideo : t.dreamingImage)}
@@ -138,73 +140,33 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </div>
         ) : imageUrl ? (
           <>
-            <div className={`w-full flex-1 flex items-center justify-center overflow-hidden transition-all duration-500 ${isPortrait ? 'p-0' : 'p-6'}`}>
+            <div className={`w-full h-full flex items-center justify-center overflow-hidden transition-all duration-500 ${isPortrait ? 'p-0' : 'p-6'}`}>
               {isVideo ? (
-                <video 
-                  ref={videoRef}
-                  src={imageUrl}
-                  controls
-                  autoPlay
-                  loop
-                  className={`rounded-2xl shadow-2xl border border-white/10 object-contain transition-all duration-500 ${isPortrait ? 'max-h-[85vh] w-auto h-full' : 'max-w-full max-h-[70vh]'}`}
-                />
+                <video ref={videoRef} src={imageUrl} controls autoPlay loop className={`rounded-2xl shadow-2xl border border-white/10 object-contain transition-all duration-500 ${isPortrait ? 'max-h-[80vh] w-auto h-full' : 'max-w-full max-h-[65vh]'}`} />
               ) : (
-                <img 
-                  ref={imgRef}
-                  src={imageUrl} 
-                  alt="Generated Art" 
-                  className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${isPortrait ? 'max-h-[85vh] h-full w-auto' : 'max-w-full max-h-[70vh]'}`}
-                  style={{ filter: isEditing ? `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)` : 'none' }}
-                  crossOrigin="anonymous"
-                  onClick={() => setIsFullSizeOpen(true)}
-                />
+                <img ref={imgRef} src={imageUrl} alt="Generated Art" className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${isPortrait ? 'max-h-[80vh] h-full w-auto' : 'max-w-full max-h-[65vh]'}`} style={{ filter: isEditing ? `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)` : 'none' }} crossOrigin="anonymous" onClick={() => setIsFullSizeOpen(true)} />
               )}
               <canvas ref={canvasRef} className="hidden" />
             </div>
-            
             {!isEditing && (
-              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-950/80 backdrop-blur-xl px-6 py-4 rounded-3xl border border-white/10 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 z-20">
-                <button onClick={handleDownload} className="p-3 text-white hover:bg-white/10 rounded-2xl transition-all" title={t.download}>
-                  <Download size={22} />
-                </button>
+              <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-2xl px-6 py-4 rounded-3xl border border-white/10 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 z-20 shadow-2xl">
+                <button onClick={handleDownload} className="p-3 text-white hover:bg-white/10 rounded-2xl transition-all" title={t.download}><Download size={22} /></button>
                 {!isVideo && (
                   <>
-                    <button onClick={handleUpscaleAction} disabled={isLoading || isUpscaling} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all relative group/btn" title={t.upscaleTo4K}>
-                      <div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full">4K</div>
-                      <Sparkles size={22} />
-                    </button>
-                    <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all" title={t.downloadPdf}>
-                      {isPdfGenerating ? <Loader2 className="animate-spin" size={22} /> : <FileText size={22} />}
-                    </button>
-                    <button onClick={() => setIsEditing(true)} className="p-3 text-emerald-400 hover:bg-emerald-400/10 rounded-2xl transition-all" title={t.edit}>
-                      <Edit3 size={22} />
-                    </button>
+                    <button onClick={handleUpscaleAction} disabled={isLoading || isUpscaling} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all relative group/btn" title={t.upscaleTo4K}><div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full">4K</div><Sparkles size={22} /></button>
+                    <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all" title={t.downloadPdf}>{isPdfGenerating ? <Loader2 className="animate-spin" size={22} /> : <FileText size={22} />}</button>
+                    <button onClick={() => setIsEditing(true)} className="p-3 text-emerald-400 hover:bg-emerald-400/10 rounded-2xl transition-all" title={t.edit}><Edit3 size={22} /></button>
                   </>
                 )}
-                <button onClick={() => setIsFullSizeOpen(true)} className="p-3 text-slate-400 hover:text-white rounded-2xl transition-all">
-                  <Maximize2 size={22} />
-                </button>
+                <button onClick={() => setIsFullSizeOpen(true)} className="p-3 text-slate-400 hover:text-white rounded-2xl transition-all"><Maximize2 size={22} /></button>
               </div>
             )}
-
             {isEditing && (
-              <div className="w-full bg-slate-950 p-8 border-t border-white/5 animate-in slide-in-from-bottom-8 duration-500 z-30">
+              <div className="absolute inset-x-0 bottom-0 bg-slate-950/95 backdrop-blur-xl p-8 border-t border-white/10 animate-in slide-in-from-bottom-8 duration-500 z-30">
                 <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-8 mb-8">
                   <div className="space-y-6">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                        <span>{t.brightness}</span>
-                        <span>{editSettings.brightness}%</span>
-                      </div>
-                      <input type="range" min="0" max="200" value={editSettings.brightness} onChange={(e) => setEditSettings({...editSettings, brightness: parseInt(e.target.value)})} className="w-full accent-indigo-500" />
-                    </div>
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                        <span>{t.contrast}</span>
-                        <span>{editSettings.contrast}%</span>
-                      </div>
-                      <input type="range" min="0" max="200" value={editSettings.contrast} onChange={(e) => setEditSettings({...editSettings, contrast: parseInt(e.target.value)})} className="w-full accent-indigo-500" />
-                    </div>
+                    <div className="space-y-2"><div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest"><span>{t.brightness}</span><span>{editSettings.brightness}%</span></div><input type="range" min="0" max="200" value={editSettings.brightness} onChange={(e) => setEditSettings({...editSettings, brightness: parseInt(e.target.value)})} className="w-full accent-indigo-500" /></div>
+                    <div className="space-y-2"><div className="flex justify-between text-[10px] font-black uppercase text-slate-500 tracking-widest"><span>{t.contrast}</span><span>{editSettings.contrast}%</span></div><input type="range" min="0" max="200" value={editSettings.contrast} onChange={(e) => setEditSettings({...editSettings, contrast: parseInt(e.target.value)})} className="w-full accent-indigo-500" /></div>
                   </div>
                   <div className="flex flex-wrap gap-4 items-center">
                     <button onClick={() => setEditSettings({...editSettings, grayscale: editSettings.grayscale === 100 ? 0 : 100})} className={`px-4 py-2 rounded-xl text-xs font-bold border ${editSettings.grayscale === 100 ? 'bg-white text-black' : 'text-white border-white/10'}`}>{t.grayscale}</button>
@@ -213,12 +175,8 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
                   </div>
                 </div>
                 <div className="flex gap-4">
-                  <button onClick={applyEdits} className="flex-1 py-4 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2">
-                    <Save size={18} /> {t.save}
-                  </button>
-                  <button onClick={() => setIsEditing(false)} className="px-8 py-4 bg-slate-800 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-slate-700 transition-all">
-                    {t.cancel}
-                  </button>
+                  <button onClick={applyEdits} className="flex-1 py-4 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-slate-200 transition-all flex items-center justify-center gap-2"><Save size={18} /> {t.save}</button>
+                  <button onClick={() => setIsEditing(false)} className="px-8 py-4 bg-slate-800 text-white font-black uppercase tracking-widest rounded-2xl hover:bg-slate-700 transition-all">{t.cancel}</button>
                 </div>
               </div>
             )}
@@ -231,11 +189,43 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
         )}
       </div>
 
+      {/* Persistent History Component */}
+      {history.length > 0 && (
+        <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-4 overflow-hidden shadow-xl">
+           <div className="flex items-center gap-3 mb-3 px-2">
+              <History size={14} className="text-indigo-400" />
+              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Persistent History (Saved Locally)</span>
+           </div>
+           <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+              {history.map((item) => (
+                <button 
+                  key={item.id} 
+                  onClick={() => onSelectFromHistory?.(item)}
+                  className={`relative shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all hover:scale-105 group/hist ${
+                    imageUrl === item.url ? 'border-indigo-500 shadow-lg shadow-indigo-500/20' : 'border-white/5 hover:border-white/20'
+                  }`}
+                >
+                  {item.type === 'video' ? (
+                     <div className="w-full h-full bg-slate-800 flex items-center justify-center relative">
+                        <Play size={20} className="text-white opacity-50" />
+                        <div className="absolute top-1 right-1 bg-purple-600 text-[6px] font-black px-1 rounded-sm">VEO</div>
+                     </div>
+                  ) : (
+                    <img src={item.url} alt="History" className="w-full h-full object-cover" />
+                  )}
+                  <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover/hist:opacity-100 transition-opacity" />
+                  <div className="absolute bottom-0 inset-x-0 p-1 bg-black/60 backdrop-blur-sm transform translate-y-full group-hover/hist:translate-y-0 transition-transform">
+                     <p className="text-[6px] text-white font-bold truncate px-1">{item.prompt}</p>
+                  </div>
+                </button>
+              ))}
+           </div>
+        </div>
+      )}
+
       {isFullSizeOpen && imageUrl && (
-        <div className="fixed inset-0 z-[300] bg-slate-950 flex items-center justify-center animate-in fade-in duration-300" onClick={() => setIsFullSizeOpen(false)}>
-          <button className="absolute top-8 right-8 z-10 p-4 bg-white/5 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/10 shadow-2xl">
-            <X size={24} />
-          </button>
+        <div className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-300" onClick={() => setIsFullSizeOpen(false)}>
+          <button className="absolute top-8 right-8 z-10 p-4 bg-white/5 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/10 shadow-2xl"><X size={24} /></button>
           {isVideo ? (
             <video src={imageUrl} controls autoPlay className={`max-w-full max-h-screen shadow-2xl ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
           ) : (
@@ -243,6 +233,6 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           )}
         </div>
       )}
-    </>
+    </div>
   );
 };

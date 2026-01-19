@@ -6,7 +6,8 @@ export enum AspectRatio {
   Ratio16_9 = "16:9",
   Ratio9_16 = "9:16",
   RatioA4 = "A4",
-  Ratio8_5_11 = "8.5:11"
+  Ratio8_5_11 = "8.5:11",
+  Ratio8_5_8_5 = "8.5:8.5"
 }
 
 export enum ArtStyle {
@@ -37,6 +38,14 @@ export type VideoResolution = "720p" | "1080p";
 export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'video' | 'pencil-sketch';
 
 export type Language = 'en' | 'fr' | 'ro';
+
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  prompt: string;
+  timestamp: number;
+  type: 'image' | 'video';
+}
 
 export interface GenerationResult {
   imageUrl: string | null;

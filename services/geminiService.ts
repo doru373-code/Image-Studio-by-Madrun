@@ -26,6 +26,8 @@ export const generateImage = async (
   let apiRatio: string = aspectRatio;
   if (aspectRatio === AspectRatio.RatioA4 || aspectRatio === AspectRatio.Ratio8_5_11) {
     apiRatio = "3:4";
+  } else if (aspectRatio === AspectRatio.Ratio8_5_8_5) {
+    apiRatio = "1:1";
   }
 
   const imageConfig: any = {
