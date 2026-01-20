@@ -1,4 +1,3 @@
-
 export enum AspectRatio {
   Ratio1_1 = "1:1",
   Ratio4_5 = "4:5",
@@ -31,9 +30,8 @@ export enum ImageModel {
 }
 
 export type ImageResolution = "1K" | "2K" | "4K";
-export type VideoResolution = "720p" | "1080p";
 
-export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'video' | 'pencil-sketch';
+export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor';
 
 export type Language = 'en' | 'fr' | 'ro';
 
@@ -42,7 +40,6 @@ export interface HistoryEntry {
   url: string;
   prompt: string;
   timestamp: number;
-  type: 'image' | 'video';
 }
 
 export interface GenerationResult {

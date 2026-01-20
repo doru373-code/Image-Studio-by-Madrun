@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Palette, Key, Sparkles, RefreshCcw, AlertCircle } from 'lucide-react';
-import { generateImage, generateVideo } from './services/geminiService';
-import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution, ImageModel, HistoryEntry } from './types';
+import { generateImage } from './services/geminiService';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry } from './types';
 import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
@@ -31,7 +31,6 @@ const App: React.FC = () => {
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
   const [resolution, setResolution] = useState<ImageResolution>("1K");
-  const [videoResolution, setVideoResolution] = useState<VideoResolution>("720p");
   const [imageModel, setImageModel] = useState<ImageModel>(ImageModel.Flash);
   
   const [resultUrl, setResultUrl] = useState<string | null>(null);
@@ -89,25 +88,27 @@ const App: React.FC = () => {
 
     try {
       let finalUrl = "";
-      if (mode === 'video') {
-        const vRatio = (aspectRatio === AspectRatio.Ratio9_16) ? '9:16' : (aspectRatio === AspectRatio.Ratio1_1) ? '1:1' : '16:9';
-        finalUrl = await generateVideo(prompt, vRatio as any, videoResolution, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
+      let finalPrompt = "";
+      
+      if (mode === 'remove-bg') {
+        finalPrompt = "Isolate the main subject and remove the background perfectly.";
+      } else if (mode === 'pencil-sketch') {
+        // AJUSTĂRI CREION: Adăugarea detaliilor tehnice pentru un aspect manual
+        finalPrompt = `Professional graphite pencil sketch of: ${prompt}. Use cross-hatching and fine line art. Artistic manual drawing style, detailed shading, HB and 2B pencil lead textures, realistic graphite on high-quality sketchpad paper. No colors, black and white only.`.trim();
+      } else if (mode === 'watercolor') {
+        finalPrompt = `Professional watercolor painting of: ${prompt}. Wet-on-wet technique, vibrant color washes, artistic heavy-grain paper texture, high detail, artistic brushstrokes.`.trim();
       } else {
-        let finalPrompt = "";
-        if (mode === 'remove-bg') finalPrompt = "Isolate the main subject and remove the background perfectly.";
-        else if (mode === 'pencil-sketch') finalPrompt = "Pencil sketch version, graphite shading, artistic.";
-        else finalPrompt = `${STYLE_PROMPTS[style]} ${prompt}`.trim();
-
-        finalUrl = await generateImage(finalPrompt, aspectRatio, resolution, imageModel, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
+        finalPrompt = `${STYLE_PROMPTS[style]} ${prompt}`.trim();
       }
+
+      finalUrl = await generateImage(finalPrompt, aspectRatio, resolution, imageModel, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
       
       setResultUrl(finalUrl);
       const newEntry: HistoryEntry = {
         id: Math.random().toString(36).substr(2, 9),
         url: finalUrl,
-        prompt: prompt || "AI Creation",
-        timestamp: Date.now(),
-        type: mode === 'video' ? 'video' : 'image'
+        prompt: prompt || (mode === 'watercolor' ? "Watercolor Art" : (mode === 'pencil-sketch' ? "Pencil Sketch" : "AI Creation")),
+        timestamp: Date.now()
       };
       const updatedHistory = [newEntry, ...history].slice(0, 20);
       setHistory(updatedHistory);
@@ -123,7 +124,7 @@ const App: React.FC = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [prompt, refImage1, style, aspectRatio, resolution, videoResolution, mode, imageModel, history, t]);
+  }, [prompt, refImage1, style, aspectRatio, resolution, mode, imageModel, history, t]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -141,7 +142,7 @@ const App: React.FC = () => {
           
           <div className="flex items-center gap-6">
             <div className="flex bg-slate-800/50 p-1 rounded-full border border-white/5">
-              {(['en', 'ro'] as Language[]).map((l) => (
+              {(['en', 'ro', 'fr'] as Language[]).map((l) => (
                 <button key={l} onClick={() => setLang(l)} className={`px-4 py-1.5 text-[10px] font-black rounded-full transition-all ${lang === l ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
                   {l.toUpperCase()}
                 </button>
@@ -162,15 +163,13 @@ const App: React.FC = () => {
             style={style} setStyle={setStyle} 
             aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} 
             resolution={resolution} setResolution={setResolution} 
-            videoResolution={videoResolution} setVideoResolution={setVideoResolution} 
             imageModel={imageModel} setImageModel={setImageModel} 
             isGenerating={isLoading} onGenerate={handleGenerate} 
             referenceImage1Preview={refImage1?.preview || null} 
-            referenceImage2Preview={null} referenceImage3Preview={null} referenceVideoName={null}
+            referenceImage2Preview={null}
             onReferenceImageSelect={onReferenceImageSelect} 
             onClearReferenceImage={() => setRefImage1(null)} 
-            onReferenceVideoSelect={() => {}} onClearReferenceVideo={() => {}}
-            mode={mode} setMode={setMode} audioFileName={null} onAudioSelect={() => {}} onClearAudio={() => {}}
+            mode={mode} setMode={setMode}
           />
           
           <button 
@@ -179,7 +178,7 @@ const App: React.FC = () => {
             className={`w-full py-5 rounded-3xl font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
           >
             {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
-            {mode === 'video' ? t.generateVideoBtn : t.generateBtn}
+            {mode === 'generate' ? t.generateBtn : (mode === 'erase' ? t.eraseBtn : (mode === 'remove-bg' ? t.removeBgBtn : (mode === 'pencil-sketch' ? t.pencilBtn : t.modeWatercolor)))}
           </button>
 
           {error && (
@@ -193,9 +192,9 @@ const App: React.FC = () => {
         <div className="lg:col-span-8">
           <ImageDisplay 
             t={t} imageUrl={resultUrl} isLoading={isLoading} error={error} 
-            isVideo={mode === 'video'} aspectRatio={aspectRatio} 
+            aspectRatio={aspectRatio} 
             onUpdateImage={(url) => setResultUrl(url)} 
-            history={history} onSelectFromHistory={(item) => {setResultUrl(item.url); setMode(item.type === 'video' ? 'video' : 'generate');}}
+            history={history} onSelectFromHistory={(item) => {setResultUrl(item.url); setMode('generate');}}
           />
         </div>
       </main>

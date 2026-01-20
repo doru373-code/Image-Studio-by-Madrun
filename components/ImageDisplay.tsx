@@ -1,6 +1,7 @@
 
 import React, { useRef, useState } from 'react';
-import { Download, Maximize2, Edit3, Save, X, RotateCcw, Sliders, FileText, Loader2, Play, Sparkles, History, Trash2 } from 'lucide-react';
+// Import Image as ImageIcon from lucide-react to fix the error in the render function.
+import { Download, Maximize2, Edit3, Save, X, FileText, Loader2, Sparkles, History, Image as ImageIcon } from 'lucide-react';
 import { translations } from '../translations';
 import { jsPDF } from 'jspdf';
 import { AspectRatio, HistoryEntry } from '../types';
@@ -10,7 +11,6 @@ interface ImageDisplayProps {
   imageUrl: string | null;
   isLoading: boolean;
   error: string | null;
-  isVideo?: boolean;
   aspectRatio?: AspectRatio;
   onUpdateImage?: (newUrl: string) => void;
   onUpscale?: () => Promise<void>;
@@ -39,7 +39,6 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   imageUrl, 
   isLoading, 
   error, 
-  isVideo,
   aspectRatio,
   onUpdateImage,
   onUpscale,
@@ -48,7 +47,6 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
@@ -62,7 +60,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
     if (imageUrl) {
       const link = document.createElement('a');
       link.href = imageUrl;
-      link.download = isVideo ? `madrun-video-${Date.now()}.mp4` : `madrun-art-${Date.now()}.png`;
+      link.download = `madrun-art-${Date.now()}.png`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -80,7 +78,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   };
 
   const handleDownloadPdf = async () => {
-    if (!imageUrl || isVideo) return;
+    if (!imageUrl) return;
     setIsPdfGenerating(true);
     try {
       const pdf = new jsPDF({ orientation: 'portrait', unit: 'in', format: 'letter', compress: false });
@@ -132,32 +130,24 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
               <div className="absolute inset-0 border-4 border-indigo-500 rounded-full animate-spin border-t-transparent shadow-[0_0_30px_rgba(79,70,229,0.3)]"></div>
             </div>
             <p className="text-xl font-black text-indigo-400 animate-pulse tracking-tight mb-2">
-              {isUpscaling ? t.upscaling : (isVideo ? t.dreamingVideo : t.dreamingImage)}
+              {isUpscaling ? t.upscaling : t.dreamingImage}
             </p>
             <p className="text-slate-500 text-sm max-w-xs leading-relaxed">
-              {isUpscaling ? t.waitImage : (isVideo ? t.waitVideo : t.waitImage)}
+              {t.waitImage}
             </p>
           </div>
         ) : imageUrl ? (
           <>
             <div className={`w-full h-full flex items-center justify-center overflow-hidden transition-all duration-500 ${isPortrait ? 'p-0' : 'p-6'}`}>
-              {isVideo ? (
-                <video ref={videoRef} src={imageUrl} controls autoPlay loop className={`rounded-2xl shadow-2xl border border-white/10 object-contain transition-all duration-500 ${isPortrait ? 'max-h-[80vh] w-auto h-full' : 'max-w-full max-h-[65vh]'}`} />
-              ) : (
-                <img ref={imgRef} src={imageUrl} alt="Generated Art" className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${isPortrait ? 'max-h-[80vh] h-full w-auto' : 'max-w-full max-h-[65vh]'}`} style={{ filter: isEditing ? `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)` : 'none' }} crossOrigin="anonymous" onClick={() => setIsFullSizeOpen(true)} />
-              )}
+              <img ref={imgRef} src={imageUrl} alt="Generated Art" className={`object-contain rounded-xl shadow-2xl cursor-pointer transition-all hover:scale-[1.01] duration-500 ${isPortrait ? 'max-h-[80vh] h-full w-auto' : 'max-w-full max-h-[65vh]'}`} style={{ filter: isEditing ? `brightness(${editSettings.brightness}%) contrast(${editSettings.contrast}%) grayscale(${editSettings.grayscale}%) sepia(${editSettings.sepia}%) invert(${editSettings.invert}%)` : 'none' }} crossOrigin="anonymous" onClick={() => setIsFullSizeOpen(true)} />
               <canvas ref={canvasRef} className="hidden" />
             </div>
             {!isEditing && (
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 bg-slate-950/90 backdrop-blur-2xl px-6 py-4 rounded-3xl border border-white/10 flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 z-20 shadow-2xl">
                 <button onClick={handleDownload} className="p-3 text-white hover:bg-white/10 rounded-2xl transition-all" title={t.download}><Download size={22} /></button>
-                {!isVideo && (
-                  <>
-                    <button onClick={handleUpscaleAction} disabled={isLoading || isUpscaling} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all relative group/btn" title={t.upscaleTo4K}><div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full">4K</div><Sparkles size={22} /></button>
-                    <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all" title={t.downloadPdf}>{isPdfGenerating ? <Loader2 className="animate-spin" size={22} /> : <FileText size={22} />}</button>
-                    <button onClick={() => setIsEditing(true)} className="p-3 text-emerald-400 hover:bg-emerald-400/10 rounded-2xl transition-all" title={t.edit}><Edit3 size={22} /></button>
-                  </>
-                )}
+                <button onClick={handleUpscaleAction} disabled={isLoading || isUpscaling} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all relative group/btn" title={t.upscaleTo4K}><div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full">4K</div><Sparkles size={22} /></button>
+                <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all" title={t.downloadPdf}>{isPdfGenerating ? <Loader2 className="animate-spin" size={22} /> : <FileText size={22} />}</button>
+                <button onClick={() => setIsEditing(true)} className="p-3 text-emerald-400 hover:bg-emerald-400/10 rounded-2xl transition-all" title={t.edit}><Edit3 size={22} /></button>
                 <button onClick={() => setIsFullSizeOpen(true)} className="p-3 text-slate-400 hover:text-white rounded-2xl transition-all"><Maximize2 size={22} /></button>
               </div>
             )}
@@ -183,7 +173,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </>
         ) : (
           <div className="text-center p-8">
-            <Play className="w-20 h-20 mx-auto mb-6 text-slate-800 animate-pulse" />
+            <ImageIcon className="w-20 h-20 mx-auto mb-6 text-slate-800 animate-pulse" />
             <p className="text-slate-600 font-black uppercase tracking-[0.3em] text-xs">{t.creationAppear}</p>
           </div>
         )}
@@ -205,14 +195,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
                     imageUrl === item.url ? 'border-indigo-500 shadow-lg shadow-indigo-500/20' : 'border-white/5 hover:border-white/20'
                   }`}
                 >
-                  {item.type === 'video' ? (
-                     <div className="w-full h-full bg-slate-800 flex items-center justify-center relative">
-                        <Play size={20} className="text-white opacity-50" />
-                        <div className="absolute top-1 right-1 bg-purple-600 text-[6px] font-black px-1 rounded-sm">VEO</div>
-                     </div>
-                  ) : (
-                    <img src={item.url} alt="History" className="w-full h-full object-cover" />
-                  )}
+                  <img src={item.url} alt="History" className="w-full h-full object-cover" />
                   <div className="absolute inset-0 bg-indigo-600/20 opacity-0 group-hover/hist:opacity-100 transition-opacity" />
                   <div className="absolute bottom-0 inset-x-0 p-1 bg-black/60 backdrop-blur-sm transform translate-y-full group-hover/hist:translate-y-0 transition-transform">
                      <p className="text-[6px] text-white font-bold truncate px-1">{item.prompt}</p>
@@ -226,11 +209,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
       {isFullSizeOpen && imageUrl && (
         <div className="fixed inset-0 z-[300] bg-slate-950/95 backdrop-blur-xl flex items-center justify-center animate-in fade-in duration-300" onClick={() => setIsFullSizeOpen(false)}>
           <button className="absolute top-8 right-8 z-10 p-4 bg-white/5 hover:bg-white/10 text-white rounded-full backdrop-blur-md transition-all border border-white/10 shadow-2xl"><X size={24} /></button>
-          {isVideo ? (
-            <video src={imageUrl} controls autoPlay className={`max-w-full max-h-screen shadow-2xl ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
-          ) : (
-            <img src={imageUrl} alt="Full Size" className={`max-w-full max-h-screen object-contain drop-shadow-2xl animate-in zoom-in-95 ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
-          )}
+          <img src={imageUrl} alt="Full Size" className={`max-w-full max-h-screen object-contain drop-shadow-2xl animate-in zoom-in-95 ${isPortrait ? 'h-full w-auto' : 'w-full h-auto'}`} onClick={e => e.stopPropagation()} />
         </div>
       )}
     </div>
