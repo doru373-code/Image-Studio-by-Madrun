@@ -1,7 +1,5 @@
-
-import React, { useRef, useState } from 'react';
-// Import Image as ImageIcon from lucide-react to fix the error in the render function.
-import { Download, Maximize2, Edit3, Save, X, FileText, Loader2, Sparkles, History, Image as ImageIcon } from 'lucide-react';
+import React, { useRef, useState, useEffect } from 'react';
+import { Download, Maximize2, Edit3, Save, X, FileText, Loader2, Sparkles, History, Image as ImageIcon, FolderOpen, CheckCircle2 } from 'lucide-react';
 import { translations } from '../translations';
 import { jsPDF } from 'jspdf';
 import { AspectRatio, HistoryEntry } from '../types';
@@ -53,8 +51,54 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   const [isUpscaling, setIsUpscaling] = useState(false);
   const [isFullSizeOpen, setIsFullSizeOpen] = useState(false);
   const [editSettings, setEditSettings] = useState<EditSettings>(DEFAULT_SETTINGS);
+  
+  // File System Access State
+  const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
+  const [isSyncActive, setIsSyncActive] = useState(false);
+  const [showSyncSuccess, setShowSyncSuccess] = useState(false);
 
   const isPortrait = aspectRatio === AspectRatio.Ratio9_16 || aspectRatio === AspectRatio.Ratio3_4 || aspectRatio === AspectRatio.Ratio4_5 || aspectRatio === AspectRatio.RatioA4;
+
+  // Auto-save logic when a new image appears
+  useEffect(() => {
+    if (imageUrl && dirHandle && isSyncActive && !isLoading) {
+      saveImageToDisk(imageUrl);
+    }
+  }, [imageUrl, dirHandle, isSyncActive, isLoading]);
+
+  const handleLinkFolder = async () => {
+    try {
+      // @ts-ignore - modern API not in all type defs
+      const handle = await window.showDirectoryPicker({
+        mode: 'readwrite'
+      });
+      setDirHandle(handle);
+      setIsSyncActive(true);
+    } catch (err) {
+      console.error("Folder selection cancelled or failed", err);
+    }
+  };
+
+  const saveImageToDisk = async (dataUrl: string) => {
+    if (!dirHandle) return;
+    try {
+      const fileName = `art-studio-${Date.now()}.png`;
+      const fileHandle = await dirHandle.getFileHandle(fileName, { create: true });
+      const writable = await fileHandle.createWritable();
+      
+      const response = await fetch(dataUrl);
+      const blob = await response.blob();
+      
+      await writable.write(blob);
+      await writable.close();
+      
+      setShowSyncSuccess(true);
+      setTimeout(() => setShowSyncSuccess(false), 3000);
+    } catch (err) {
+      console.error("Failed to save to disk", err);
+      setIsSyncActive(false);
+    }
+  };
 
   const handleDownload = () => {
     if (imageUrl) {
@@ -123,6 +167,15 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   return (
     <div className="flex flex-col h-full gap-6 animate-in fade-in duration-700">
       <div className={`relative w-full flex-1 min-h-[500px] bg-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col items-center justify-center group overflow-hidden border border-white/5 transition-all duration-500 ${isPortrait && !isLoading ? 'lg:min-h-[700px]' : ''}`}>
+        
+        {/* Sync Toast Notification */}
+        {showSyncSuccess && (
+          <div className="absolute top-6 left-1/2 -translate-x-1/2 z-50 bg-emerald-600 text-white px-6 py-3 rounded-full flex items-center gap-3 shadow-2xl animate-in slide-in-from-top-4 duration-500">
+             <CheckCircle2 size={18} />
+             <span className="text-xs font-black uppercase tracking-widest">{t.diskSyncSaved}</span>
+          </div>
+        )}
+
         {isLoading || isUpscaling ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="relative w-24 h-24 mb-8">
@@ -148,6 +201,16 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
                 <button onClick={handleUpscaleAction} disabled={isLoading || isUpscaling} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all relative group/btn" title={t.upscaleTo4K}><div className="absolute -top-1 -right-1 bg-amber-500 text-black text-[7px] font-black px-1.5 py-0.5 rounded-full">4K</div><Sparkles size={22} /></button>
                 <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all" title={t.downloadPdf}>{isPdfGenerating ? <Loader2 className="animate-spin" size={22} /> : <FileText size={22} />}</button>
                 <button onClick={() => setIsEditing(true)} className="p-3 text-emerald-400 hover:bg-emerald-400/10 rounded-2xl transition-all" title={t.edit}><Edit3 size={22} /></button>
+                
+                {/* Disk Sync Button */}
+                <button 
+                  onClick={handleLinkFolder} 
+                  className={`p-3 rounded-2xl transition-all ${isSyncActive ? 'text-emerald-400 bg-emerald-400/10 ring-1 ring-emerald-500/50' : 'text-slate-400 hover:bg-white/10'}`} 
+                  title={t.diskSyncBtn}
+                >
+                  <FolderOpen size={22} />
+                </button>
+
                 <button onClick={() => setIsFullSizeOpen(true)} className="p-3 text-slate-400 hover:text-white rounded-2xl transition-all"><Maximize2 size={22} /></button>
               </div>
             )}
@@ -182,9 +245,18 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
       {/* Persistent History Component */}
       {history.length > 0 && (
         <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl p-4 overflow-hidden shadow-xl">
-           <div className="flex items-center gap-3 mb-3 px-2">
-              <History size={14} className="text-indigo-400" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Persistent History (Saved Locally)</span>
+           <div className="flex items-center justify-between mb-3 px-2">
+              <div className="flex items-center gap-3">
+                <History size={14} className="text-indigo-400" />
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-500">Persistent History</span>
+              </div>
+              
+              {isSyncActive && dirHandle && (
+                <div className="flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1 rounded-full">
+                  <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                  <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">Disk Sync: {dirHandle.name}</span>
+                </div>
+              )}
            </div>
            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
               {history.map((item) => (

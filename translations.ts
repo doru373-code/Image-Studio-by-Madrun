@@ -1,3 +1,4 @@
+
 import { ArtStyle } from './types';
 
 export const translations = {
@@ -18,6 +19,8 @@ export const translations = {
       unlimited: "Unlimited Fast Generations",
       cloning: "Advanced Character Cloning",
       resolution: "Ultra-High 4K Resolution",
+      // Fix: Added missing 'video' property
+      video: "Cinematic AI Video",
       noWatermark: "No Watermarks",
       priority: "Priority GPU Access"
     },
@@ -82,6 +85,11 @@ export const translations = {
     magicWatercolorDesc: "Transforming your photo or idea into a vibrant watercolor painting.",
     magicPexarActive: "Pexar 3D Mode Active",
     magicPexarDesc: "Transforming your vision into a cinematic 3D animation style.",
+    diskSyncBtn: "Link Storage Folder",
+    diskSyncActive: "Sync Active",
+    diskSyncDesc: "Images will be auto-saved to your disk.",
+    diskSyncSaved: "Image saved to local disk.",
+    diskSyncError: "Disk access error. Please re-link folder.",
     dreamingImage: "Dreaming up your creation...",
     waitImage: "This usually takes 5-10 seconds",
     creationAppear: "Your creations will appear here",
@@ -95,6 +103,23 @@ export const translations = {
     grayscale: "Grayscale",
     sepia: "Sepia",
     invert: "Invert",
+    // Fix: Added missing Admin Dashboard keys
+    adminDashboard: "Admin Dashboard",
+    totalUsers: "Total Users",
+    activeSubscribers: "Active Subscribers",
+    manageUsers: "Manage Users",
+    userEmail: "User Email",
+    status: "Status",
+    actions: "Actions",
+    reviveFree: "Revoke Pro",
+    grantPro: "Grant Pro",
+    discounts: "Discounts",
+    createDiscount: "Create Discount",
+    discountPlaceholder: "CODE50",
+    activeDiscounts: "Active Discounts",
+    // Fix: Added missing Policy keys
+    privacyPolicy: "Privacy Policy",
+    termsOfService: "Terms of Service",
     styles: {
       [ArtStyle.None]: "None",
       [ArtStyle.Photorealistic]: "Photorealistic",
@@ -129,6 +154,8 @@ export const translations = {
       unlimited: "Generări Rapide Nelimitate",
       cloning: "Clonare Personaje Avansată",
       resolution: "Rezoluție Ultra-High 4K",
+      // Fix: Added missing 'video' property
+      video: "Video Cinematic AI",
       noWatermark: "Fără Watermark",
       priority: "Acces Prioritar GPU"
     },
@@ -193,6 +220,11 @@ export const translations = {
     magicWatercolorDesc: "Transformăm ideea sau fotografia ta într-o pictură vibrantă în aquarelă.",
     magicPexarActive: "Mod Pexar 3D Activ",
     magicPexarDesc: "Transformăm viziunea ta într-un stil de animație 3D cinematic.",
+    diskSyncBtn: "Folder Stocare Locală",
+    diskSyncActive: "Sincronizare Activă",
+    diskSyncDesc: "Imaginile vor fi salvate automat pe disk.",
+    diskSyncSaved: "Imagine salvată pe disc.",
+    diskSyncError: "Eroare acces disc. Reconectează folderul.",
     dreamingImage: "Se generează creația...",
     waitImage: "Durează de obicei 5-10 secunde",
     creationAppear: "Creațiile tale vor apărea aici",
@@ -206,6 +238,23 @@ export const translations = {
     grayscale: "Alb-negru",
     sepia: "Sepia",
     invert: "Invert",
+    // Fix: Added missing Admin Dashboard keys
+    adminDashboard: "Panou Administrator",
+    totalUsers: "Utilizatori Totali",
+    activeSubscribers: "Abonați Activi",
+    manageUsers: "Administrare Utilizatori",
+    userEmail: "Email Utilizator",
+    status: "Status",
+    actions: "Acțiuni",
+    reviveFree: "Revocă Pro",
+    grantPro: "Acordă Pro",
+    discounts: "Reduceri",
+    createDiscount: "Creează Cod Reducere",
+    discountPlaceholder: "COD50",
+    activeDiscounts: "Reduceri Active",
+    // Fix: Added missing Policy keys
+    privacyPolicy: "Politica de Confidențialitate",
+    termsOfService: "Termeni și Condiții",
     styles: {
       [ArtStyle.None]: "Fără stil",
       [ArtStyle.Photorealistic]: "Fotorealist",
@@ -240,6 +289,8 @@ export const translations = {
       unlimited: "Générations Rapides Illimitées",
       cloning: "Clonage de Personnage Avancé",
       resolution: "Résolution Ultra-High 4K",
+      // Fix: Added missing 'video' property
+      video: "Vidéo Cinematic AI",
       noWatermark: "Sans Filigrane",
       priority: "Accès GPU Prioritaire"
     },
@@ -304,6 +355,11 @@ export const translations = {
     magicWatercolorDesc: "Transformer votre idée en peinture aquarelle.",
     magicPexarActive: "Mode Pexar 3D Actif",
     magicPexarDesc: "Transformer votre vision en style d'animation 3D cinématographique.",
+    diskSyncBtn: "Folder Stockage Disque",
+    diskSyncActive: "Sync Activé",
+    diskSyncDesc: "Sauvegarde auto sur disque.",
+    diskSyncSaved: "Image sauvée sur disque.",
+    diskSyncError: "Erreur disque. Re-lier le dossier.",
     dreamingImage: "Création...",
     waitImage: "5-10 secondes",
     creationAppear: "Vos créations ici",
@@ -317,6 +373,23 @@ export const translations = {
     grayscale: "Gris",
     sepia: "Sépia",
     invert: "Inverser",
+    // Fix: Added missing Admin Dashboard keys
+    adminDashboard: "Tableau de Bord Admin",
+    totalUsers: "Utilisateurs Totaux",
+    activeSubscribers: "Abonnés Actifs",
+    manageUsers: "Gérer les Utilisateurs",
+    userEmail: "Email Utilisateur",
+    status: "Statut",
+    actions: "Actions",
+    reviveFree: "Révoquer Pro",
+    grantPro: "Accorder Pro",
+    discounts: "Remises",
+    createDiscount: "Créer une Remise",
+    discountPlaceholder: "PROMO50",
+    activeDiscounts: "Remises Actives",
+    // Fix: Added missing Policy keys
+    privacyPolicy: "Politique de Confidentialité",
+    termsOfService: "Conditions d'Utilisation",
     styles: {
       [ArtStyle.None]: "Aucun",
       [ArtStyle.Photorealistic]: "Photoréaliste",
