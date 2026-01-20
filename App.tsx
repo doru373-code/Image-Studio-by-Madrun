@@ -46,7 +46,7 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
+  const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(false);
 
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
   const [refImage2, setRefImage2] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
@@ -54,17 +54,19 @@ const App: React.FC = () => {
   const t = useMemo(() => translations[lang], [lang]);
   const [users, setUsers] = useState<any[]>([]);
 
-  // Proactive Key Check
+  // Proactive Key Check - faster interval and immediate execution
   useEffect(() => {
     const checkKey = async () => {
       if (window.aistudio) {
         const selected = await window.aistudio.hasSelectedApiKey();
         setHasApiKeySelected(selected);
+      } else {
+        // If not in aistudio environment (e.g. local dev with env vars), we assume it's fine
+        setHasApiKeySelected(!!process.env.API_KEY);
       }
     };
     checkKey();
-    // Re-check periodically if key selection is pending
-    const interval = setInterval(checkKey, 5000);
+    const interval = setInterval(checkKey, 2000); // Faster check
     return () => clearInterval(interval);
   }, []);
 
@@ -157,7 +159,8 @@ const App: React.FC = () => {
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      setHasApiKeySelected(true); // Assume success per instructions
+      // Assume success as per racing condition instructions
+      setHasApiKeySelected(true); 
       setError(null);
     }
   };
@@ -178,13 +181,18 @@ const App: React.FC = () => {
 
   const handleUpscale = useCallback(async () => {
     if (!resultUrl) return;
+    
+    // Proactive check before calling API
     if (window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
-        await window.aistudio.openSelectKey();
-        setHasApiKeySelected(true);
+        await handleApiKeyFix();
       }
+    } else if (!process.env.API_KEY) {
+       setError("API Key missing. Please configure your environment.");
+       return;
     }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -229,13 +237,15 @@ const App: React.FC = () => {
       return;
     }
     
-    // Check key for Pro/Video models
+    // Check key for Pro/Video models or high res
     if ((mode === 'video' || imageModel === ImageModel.Pro) && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
-        await window.aistudio.openSelectKey();
-        setHasApiKeySelected(true);
+        await handleApiKeyFix();
       }
+    } else if ((mode === 'video' || imageModel === ImageModel.Pro) && !process.env.API_KEY) {
+      setError("API Key missing for high-tier models. Please configure your environment.");
+      return;
     }
 
     setIsLoading(true);

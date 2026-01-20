@@ -9,7 +9,12 @@ export const generateImage = async (
   model: ImageModel,
   referenceImage?: { data: string; mimeType: string }
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key is not configured. Please use the 'API Configuration' button to select a key.");
+  }
+  
+  const ai = new GoogleGenAI({ apiKey });
   
   const parts: any[] = [];
   if (referenceImage) {
@@ -90,7 +95,12 @@ export const generateVideo = async (
   resolution: VideoResolution,
   referenceImage?: { data: string; mimeType: string }
 ): Promise<string> => {
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key is not configured for Video Generation. Please use the 'API Configuration' button.");
+  }
+
+  const ai = new GoogleGenAI({ apiKey });
 
   try {
     let operation = await ai.models.generateVideos({
@@ -122,7 +132,7 @@ export const generateVideo = async (
       throw new Error("Generarea video s-a încheiat, dar link-ul de descărcare lipsește.");
     }
 
-    const response = await fetch(`${downloadLink}&key=${process.env.API_KEY}`);
+    const response = await fetch(`${downloadLink}&key=${apiKey}`);
     if (!response.ok) {
        throw new Error(`Eroare la descărcarea fișierului video: ${response.statusText}`);
     }
