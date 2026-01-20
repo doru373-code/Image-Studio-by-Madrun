@@ -54,23 +54,21 @@ const App: React.FC = () => {
   const t = useMemo(() => translations[lang], [lang]);
   const [users, setUsers] = useState<any[]>([]);
 
-  // Proactive Key Check - faster interval and immediate execution
+  // Verificare stabilă a cheii API
   useEffect(() => {
     const checkKey = async () => {
       if (window.aistudio) {
         const selected = await window.aistudio.hasSelectedApiKey();
-        setHasApiKeySelected(selected);
-      } else {
-        // Fallback for local dev or standard env vars
-        setHasApiKeySelected(!!(process.env.API_KEY && process.env.API_KEY.length > 0));
+        // Doar setăm la false dacă chiar nu există cheie, evităm resetarea stării în timpul apelurilor
+        if (!selected && hasApiKeySelected) setHasApiKeySelected(false);
+        else if (selected && !hasApiKeySelected) setHasApiKeySelected(true);
       }
     };
     checkKey();
-    const interval = setInterval(checkKey, 2000);
+    const interval = setInterval(checkKey, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [hasApiKeySelected]);
 
-  // Load history from Local Storage
   useEffect(() => {
     if (userEmail) {
       const savedHistory = localStorage.getItem(`studio-history-${userEmail}`);
@@ -78,7 +76,6 @@ const App: React.FC = () => {
     }
   }, [userEmail]);
 
-  // Save history to Local Storage
   useEffect(() => {
     if (userEmail && history.length > 0) {
       localStorage.setItem(`studio-history-${userEmail}`, JSON.stringify(history));
@@ -183,9 +180,7 @@ const App: React.FC = () => {
     
     if (window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        await handleApiKeyFix();
-      }
+      if (!hasKey) await handleApiKeyFix();
     }
 
     setIsLoading(true);
@@ -213,6 +208,7 @@ const App: React.FC = () => {
       addToHistory(upscaledImage, 'image');
     } catch (err: any) {
       if (err.message?.includes("Requested entity was not found")) {
+        setHasApiKeySelected(false);
         handleApiKeyFix();
       } else {
         setError(err.message || t.errorGeneric);
@@ -234,9 +230,7 @@ const App: React.FC = () => {
     
     if ((mode === 'video' || imageModel === ImageModel.Pro) && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        await handleApiKeyFix();
-      }
+      if (!hasKey) await handleApiKeyFix();
     }
 
     setIsLoading(true);
@@ -268,6 +262,7 @@ const App: React.FC = () => {
       }
     } catch (err: any) {
       if (err.message?.includes("Requested entity was not found")) {
+        setHasApiKeySelected(false);
         handleApiKeyFix();
       } else {
         setError(err.message || t.errorGeneric);
@@ -332,7 +327,7 @@ const App: React.FC = () => {
           <div className="max-w-[1440px] mx-auto flex items-center justify-between text-amber-400 text-[10px] font-black uppercase tracking-widest">
             <div className="flex items-center gap-2">
               <AlertCircle size={14} />
-              <span>Configurare API Necesară pentru Pro & Video</span>
+              <span>Configurare API Necesară pentru Pro & Video (ai.google.dev/billing)</span>
             </div>
             <button onClick={handleApiKeyFix} className="underline hover:text-white">Configurează Acum</button>
           </div>
