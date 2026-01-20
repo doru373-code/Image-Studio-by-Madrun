@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { Upload, X, Image as ImageIcon, Eraser, Palette, Scissors, Pencil, Cpu, Sparkles, Droplets } from 'lucide-react';
+import { Upload, X, Image as ImageIcon, Eraser, Palette, Scissors, Pencil, Cpu, Sparkles, Droplets, Video } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode, ImageModel } from '../types';
 import { translations } from '../translations';
 
@@ -19,6 +20,7 @@ interface ControlsProps {
   onGenerate: () => void;
   referenceImage1Preview: string | null;
   referenceImage2Preview: string | null;
+  referenceImage3Preview?: string | null;
   onReferenceImageSelect: (file: File, slot: 1 | 2 | 3) => void;
   onClearReferenceImage: (slot: 1 | 2 | 3) => void;
   mode: AppMode;
@@ -26,328 +28,79 @@ interface ControlsProps {
 }
 
 export const Controls: React.FC<ControlsProps> = ({
-  t,
-  prompt,
-  setPrompt,
-  style,
-  setStyle,
-  aspectRatio,
-  setAspectRatio,
-  resolution,
-  setResolution,
-  imageModel,
-  setImageModel,
-  isGenerating,
-  referenceImage1Preview,
-  referenceImage2Preview,
-  onReferenceImageSelect,
-  onClearReferenceImage,
-  mode,
-  setMode
+  t, prompt, setPrompt, style, setStyle, aspectRatio, setAspectRatio, resolution, setResolution,
+  imageModel, setImageModel, isGenerating, referenceImage1Preview, referenceImage2Preview, referenceImage3Preview,
+  onReferenceImageSelect, onClearReferenceImage, mode, setMode
 }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2 | 3) => {
-    if (e.target.files && e.target.files[0]) {
-      onReferenceImageSelect(e.target.files[0], slot);
-    }
+    if (e.target.files && e.target.files[0]) onReferenceImageSelect(e.target.files[0], slot);
   };
 
   const renderImageUpload = (slot: 1 | 2 | 3, preview: string | null, label: string, hint: string) => (
     <div className="flex-1 min-w-0">
-      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">
-         {label}
-      </label>
-      
+      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3">{label}</label>
       {!preview ? (
-        <div className="relative h-32">
-          <input
-            type="file"
-            id={`ref-image-${slot}`}
-            accept="image/*"
-            className="hidden"
-            onChange={(e) => handleFileChange(e, slot)}
-            disabled={isGenerating}
-          />
-          <label
-            htmlFor={`ref-image-${slot}`}
-            className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-[1.5rem] cursor-pointer transition-all ${
-               isGenerating ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-800' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 hover:border-indigo-500/50'
-            }`}
-          >
-            <div className="flex flex-col items-center justify-center p-4 text-center">
-              <Upload className="w-6 h-6 mb-2 text-slate-600" />
-              <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">
-                {hint}
-              </p>
-            </div>
+        <div className="relative h-28">
+          <input type="file" id={`ref-image-${slot}`} accept="image/*" className="hidden" onChange={(e) => handleFileChange(e, slot)} disabled={isGenerating} />
+          <label htmlFor={`ref-image-${slot}`} className={`flex flex-col items-center justify-center w-full h-full border-2 border-dashed rounded-[1.5rem] cursor-pointer transition-all ${isGenerating ? 'opacity-50 cursor-not-allowed border-slate-700 bg-slate-800' : 'border-slate-800 bg-slate-900/50 hover:bg-slate-800/80 hover:border-indigo-500/50'}`}>
+            <Upload className="w-5 h-5 mb-1 text-slate-600" />
+            <p className="text-[8px] text-slate-500 font-bold uppercase tracking-wider">{hint}</p>
           </label>
         </div>
       ) : (
-        <div className="relative h-32 group rounded-[1.5rem] overflow-hidden border border-white/5 bg-slate-900 shadow-2xl">
-          <img 
-            src={preview} 
-            alt={`Reference ${slot}`} 
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" 
-          />
-          <button
-            onClick={() => onClearReferenceImage(slot)}
-            disabled={isGenerating}
-            className="absolute top-2 right-2 p-1.5 bg-black/60 hover:bg-red-500 rounded-full text-white backdrop-blur-sm transition-all shadow-lg"
-          >
-            <X size={12} />
-          </button>
-          <div className="absolute bottom-0 left-0 right-0 p-2 bg-gradient-to-t from-black/80 to-transparent">
-            <span className="text-[9px] text-white font-black uppercase tracking-widest flex items-center gap-1.5">
-              <ImageIcon size={10} className="text-indigo-400" /> 
-              {mode === 'generate' ? t.referenceActive : t.sourceImage}
-            </span>
-          </div>
+        <div className="relative h-28 group rounded-[1.5rem] overflow-hidden border border-white/5 bg-slate-900">
+          <img src={preview} alt={`Reference ${slot}`} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-700" />
+          <button onClick={() => onClearReferenceImage(slot)} className="absolute top-2 right-2 p-1 bg-black/60 hover:bg-red-500 rounded-full text-white backdrop-blur-sm transition-all"><X size={10} /></button>
         </div>
       )}
     </div>
   );
 
   return (
-    <div className="space-y-8">
-      {/* Mode Switcher */}
-      <div className="flex p-1.5 bg-slate-900 rounded-2xl border border-white/5 shadow-inner">
-        <button
-          onClick={() => setMode('generate')}
-          disabled={isGenerating}
-          className={`flex-1 flex items-center justify-center py-3 px-2 text-xs font-bold rounded-xl transition-all duration-300 ${
-            mode === 'generate' 
-              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/20' 
-              : 'text-slate-500 hover:text-slate-300 hover:bg-slate-800/50'
-          }`}
-        >
-          <Palette size={16} className="mr-2" />
-          {t.modeCreate}
-        </button>
+    <div className="space-y-6">
+      <div className="flex flex-wrap gap-2 p-1.5 bg-slate-900 rounded-2xl border border-white/5 shadow-inner">
+        <button onClick={() => setMode('generate')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'generate' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Palette size={14} className="mr-2" /> CREATE</button>
+        <button onClick={() => setMode('video-clone')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'video-clone' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Video size={14} className="mr-2" /> VIDEO CLONE</button>
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <button
-          onClick={() => setMode('erase')}
-          disabled={isGenerating}
-          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
-            mode === 'erase' 
-              ? 'bg-rose-600 text-white border-rose-500 shadow-lg shadow-rose-600/20' 
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          <Eraser size={16} className="mr-2" />
-          {t.modeEraser}
-        </button>
-        <button
-          onClick={() => setMode('remove-bg')}
-          disabled={isGenerating}
-          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
-            mode === 'remove-bg' 
-              ? 'bg-emerald-600 text-white border-emerald-500 shadow-lg shadow-emerald-600/20' 
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          <Scissors size={16} className="mr-2" />
-          {t.modeRemoveBg}
-        </button>
-        <button
-          onClick={() => setMode('pencil-sketch')}
-          disabled={isGenerating}
-          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
-            mode === 'pencil-sketch' 
-              ? 'bg-amber-600 text-white border-amber-500 shadow-lg shadow-amber-600/20' 
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          <Pencil size={16} className="mr-2" />
-          {t.modePencil}
-        </button>
-        <button
-          onClick={() => setMode('watercolor')}
-          disabled={isGenerating}
-          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold ${
-            mode === 'watercolor' 
-              ? 'bg-indigo-600 text-white border-indigo-500 shadow-lg shadow-indigo-600/20' 
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          <Droplets size={16} className="mr-2" />
-          {t.modeWatercolor}
-        </button>
-        <button
-          onClick={() => setMode('pexar')}
-          disabled={isGenerating}
-          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold col-span-2 ${
-            mode === 'pexar' 
-              ? 'bg-fuchsia-600 text-white border-fuchsia-500 shadow-lg shadow-fuchsia-600/20' 
-              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
-          }`}
-        >
-          <Sparkles size={16} className="mr-2" />
-          {t.modePexar}
-        </button>
+        <button onClick={() => setMode('erase')} className={`flex items-center justify-center py-2 px-2 rounded-xl border transition-all text-[10px] font-bold ${mode === 'erase' ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}><Eraser size={14} className="mr-1" /> {t.modeEraser}</button>
+        <button onClick={() => setMode('remove-bg')} className={`flex items-center justify-center py-2 px-2 rounded-xl border transition-all text-[10px] font-bold ${mode === 'remove-bg' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}><Scissors size={14} className="mr-1" /> {t.modeRemoveBg}</button>
       </div>
 
-      {/* Engine Selection */}
+      <div className="grid grid-cols-3 gap-2">
+        <button onClick={() => setMode('pencil-sketch')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pencil-sketch' ? 'bg-slate-700 text-white border-slate-500' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Pencil size={14} className="mb-1" /> Sketch</button>
+        <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Watercolor</button>
+        <button onClick={() => setMode('pexar')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pexar' ? 'bg-purple-900/40 text-purple-300 border-purple-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Sparkles size={14} className="mb-1" /> Pexar 3D</button>
+      </div>
+
+      <div className="flex gap-2">
+        {renderImageUpload(1, referenceImage1Preview, "Face REF", "Base")}
+        {renderImageUpload(2, referenceImage2Preview, "Side REF", "Angle")}
+        {(mode === 'video-clone' || mode === 'generate' || mode === 'pencil-sketch' || mode === 'watercolor' || mode === 'pexar') && renderImageUpload(3, referenceImage3Preview || null, "Body REF", "Context")}
+      </div>
+
       <div className="space-y-3">
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
-          {t.modelLabel}
-        </label>
-        <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-900 rounded-2xl border border-white/5">
-          <button
-            onClick={() => setImageModel(ImageModel.Flash)}
-            disabled={isGenerating}
-            className={`flex items-center justify-center py-2.5 px-2 text-[10px] font-black rounded-xl transition-all ${
-              imageModel === ImageModel.Flash
-                ? 'bg-slate-800 text-emerald-400 border border-emerald-500/30'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Cpu size={14} className="mr-2" />
-            {t.modelFlash}
-          </button>
-          <button
-            onClick={() => setImageModel(ImageModel.Pro)}
-            disabled={isGenerating}
-            className={`flex items-center justify-center py-2.5 px-2 text-[10px] font-black rounded-xl transition-all ${
-              imageModel === ImageModel.Pro
-                ? 'bg-indigo-950 text-indigo-400 border border-indigo-500/30'
-                : 'text-slate-500 hover:text-slate-300'
-            }`}
-          >
-            <Sparkles size={14} className="mr-2" />
-            {t.modelPro}
-          </button>
-        </div>
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">{mode === 'video-clone' ? "Descrie Acțiunea Video" : t.describeImagination}</label>
+        <textarea rows={3} className="w-full bg-slate-900 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none shadow-inner" placeholder={mode === 'video-clone' ? "Ex: Personajul merge pe o plajă exotică la apus..." : t.promptPlaceholderGen} value={prompt} onChange={(e) => setPrompt(e.target.value)} disabled={isGenerating} />
       </div>
 
-      {/* Image Uploads */}
-      <div className="flex gap-4">
-        {mode === 'generate' ? (
-          <>
-            {renderImageUpload(1, referenceImage1Preview, t.refImage1, t.uploadGenHint)}
-            {renderImageUpload(2, referenceImage2Preview, t.refImage2, t.uploadMixHint)}
-          </>
-        ) : (
-          <div className="w-full">
-             {renderImageUpload(1, referenceImage1Preview, 
-               mode === 'erase' ? t.uploadImageRequired : (mode === 'remove-bg' ? t.uploadRemoveBgRequired : (mode === 'pencil-sketch' ? t.uploadPencilHint : (mode === 'watercolor' ? t.uploadWatercolorHint : t.uploadPexarHint))),
-               mode === 'erase' ? t.uploadEraserHint : (mode === 'remove-bg' ? t.uploadRemoveBgHint : (mode === 'pencil-sketch' ? t.uploadPencilHint : (mode === 'watercolor' ? t.uploadWatercolorHint : t.uploadPexarHint)))
-             )}
-          </div>
-        )}
-      </div>
-
-      {/* Inputs Logic */}
-      <div className="space-y-3">
-        <label htmlFor="prompt" className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">
-          {t.describeImagination}
-        </label>
-        <textarea
-          id="prompt"
-          rows={4}
-          className="w-full bg-slate-900 border border-white/5 rounded-2xl p-5 text-sm text-white placeholder-slate-800 focus:ring-2 focus:ring-indigo-500/50 outline-none transition-all resize-none shadow-inner"
-          placeholder={t.promptPlaceholderGen}
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          disabled={isGenerating || mode === 'remove-bg'}
-        />
-        {(mode === 'remove-bg' || mode === 'pencil-sketch' || mode === 'watercolor' || mode === 'pexar') && (
-           <p className="text-[10px] text-indigo-400/80 font-medium italic">
-             {mode === 'remove-bg' ? t.magicRemoveBgDesc : (mode === 'pencil-sketch' ? t.magicPencilDesc : (mode === 'watercolor' ? t.magicWatercolorDesc : t.magicPexarDesc))}
-           </p>
-        )}
-      </div>
-
-      {/* Style & Ratio Grid */}
-      <div className="grid grid-cols-2 gap-6">
-        {(mode === 'generate' || mode === 'watercolor' || mode === 'pexar') && (
-          <div className="space-y-3">
-            <label htmlFor="style" className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
-              {t.artStyle}
-            </label>
-            <select
-              id="style"
-              value={style}
-              onChange={(e) => setStyle(e.target.value as ArtStyle)}
-              disabled={isGenerating || mode === 'watercolor' || mode === 'pexar'}
-              className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer hover:bg-slate-800 transition-all disabled:opacity-50"
-            >
-              {mode === 'watercolor' ? (
-                <option value={ArtStyle.Watercolor}>{t.styles[ArtStyle.Watercolor]}</option>
-              ) : mode === 'pexar' ? (
-                <option value={ArtStyle.Pexar}>{t.styles[ArtStyle.Pexar]}</option>
-              ) : (
-                Object.values(ArtStyle).map((s) => (
-                  <option key={s} value={s}>
-                    {t.styles[s]}
-                  </option>
-                ))
-              )}
+      {mode !== 'video-clone' && (
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">{t.artStyle}</label>
+            <select value={style} onChange={(e) => setStyle(e.target.value as ArtStyle)} className="w-full bg-slate-900 border border-white/5 rounded-xl px-3 py-2 text-xs text-white outline-none">
+              {Object.values(ArtStyle).map(s => <option key={s} value={s}>{t.styles[s]}</option>)}
             </select>
           </div>
-        )}
-
-        <div className="space-y-3">
-           <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
-            {t.resolutionQuality}
-          </label>
-          <select
-            value={resolution}
-            onChange={(e) => setResolution(e.target.value as ImageResolution)}
-            disabled={isGenerating}
-            className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer hover:bg-slate-800 transition-all"
-          >
-            <option value="1K">1K Standard</option>
-            {imageModel === ImageModel.Pro && (
-              <>
-                <option value="2K">2K High Def</option>
-                <option value="4K">4K Ultra Def</option>
-              </>
-            )}
-          </select>
-        </div>
-
-        <div className="space-y-4 col-span-2">
-          <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
-            {t.aspectRatio}
-          </label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
-            {Object.entries(AspectRatio)
-              .map(([key, value]) => {
-                let h = '14px';
-                if (value === '1:1') h = '14px';
-                else if (value === '4:5') h = '18px';
-                else if (value === '3:4') h = '20px';
-                else if (value === '16:9') h = '8px';
-                else if (value === '9:16') h = '24px';
-                else if (value === 'A4') h = '21px';
-
-                return (
-                  <button
-                    key={key}
-                    type="button"
-                    onClick={() => setAspectRatio(value)}
-                    disabled={isGenerating}
-                    className={`flex flex-col items-center justify-center p-2 rounded-xl border transition-all h-16 ${
-                      aspectRatio === value
-                        ? 'bg-indigo-600/10 border-indigo-500 text-indigo-400 shadow-lg shadow-indigo-600/10'
-                        : 'bg-slate-900 border-white/5 text-slate-600 hover:border-white/20 hover:text-slate-300'
-                    }`}
-                    title={value}
-                  >
-                    <div 
-                      className="border border-current rounded-[1px] mb-1.5 opacity-60"
-                      style={{ width: '14px', height: h }} 
-                    />
-                    <span className="text-[8px] font-black">
-                      {value}
-                    </span>
-                  </button>
-                );
-              })}
+          <div className="space-y-2">
+            <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">Format</label>
+            <select value={aspectRatio} onChange={(e) => setAspectRatio(e.target.value as AspectRatio)} className="w-full bg-slate-900 border border-white/5 rounded-xl px-3 py-2 text-xs text-white outline-none">
+              {Object.values(AspectRatio).map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
           </div>
         </div>
-      </div>
+      )}
     </div>
   );
 };

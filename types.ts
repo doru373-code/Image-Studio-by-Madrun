@@ -1,3 +1,4 @@
+
 export enum AspectRatio {
   Ratio1_1 = "1:1",
   Ratio4_5 = "4:5",
@@ -26,12 +27,13 @@ export enum ArtStyle {
 
 export enum ImageModel {
   Flash = "gemini-2.5-flash-image",
-  Pro = "gemini-3-pro-image-preview"
+  Pro = "gemini-3-pro-image-preview",
+  Veo = "veo-3.1-generate-preview"
 }
 
-export type ImageResolution = "1K" | "2K" | "4K";
+export type ImageResolution = "1K" | "2K" | "4K" | "720p" | "1080p";
 
-export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor' | 'pexar';
+export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor' | 'pexar' | 'video-clone';
 
 export type Language = 'en' | 'fr' | 'ro';
 
@@ -48,6 +50,7 @@ export interface HistoryEntry {
   prompt: string;
   timestamp: number;
   modelUsed: ImageModel;
+  type?: 'image' | 'video';
 }
 
 export interface GenerationResult {
