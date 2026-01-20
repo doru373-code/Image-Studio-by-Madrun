@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
-import { Users, CreditCard, Tag, Plus, Check, X, Shield, Activity, ArrowRight, UserPlus, Zap, Sparkles, DollarSign, ExternalLink, BarChart3, TrendingUp, Monitor, Key } from 'lucide-react';
+import { Users, CreditCard, Tag, Plus, Check, X, Shield, Activity, ArrowRight, UserPlus, Zap, Sparkles, DollarSign, ExternalLink, BarChart3, TrendingUp, Monitor, Key, Calculator } from 'lucide-react';
 import { translations } from '../translations';
 import { getTransactions, StripeTransaction } from '../services/stripeService';
+import { ApiUsage, ImageModel } from '../types';
 
 interface UserRecord {
   id: string;
@@ -18,13 +18,22 @@ interface AdminDashboardProps {
   onClose: () => void;
   users: UserRecord[];
   onUpdateUser: (userId: string, updates: any) => void;
+  apiUsage: ApiUsage;
+  onResetApiUsage: () => void;
 }
 
-export const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, onClose, users, onUpdateUser }) => {
+export const AdminDashboard: React.FC<AdminDashboardProps> = ({ 
+  t, 
+  onClose, 
+  users, 
+  onUpdateUser, 
+  apiUsage,
+  onResetApiUsage
+}) => {
   const [discountCode, setDiscountCode] = useState('');
   const [activeDiscounts, setActiveDiscounts] = useState(['MADRUN50', 'WELCOME20']);
   const [transactions, setTransactions] = useState<StripeTransaction[]>([]);
-  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'stripe'>('stats');
+  const [activeTab, setActiveTab] = useState<'stats' | 'users' | 'stripe' | 'billing'>('stats');
 
   useEffect(() => {
     setTransactions(getTransactions());
@@ -75,10 +84,11 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, onClose, user
           </button>
         </div>
 
-        <div className="flex gap-2 mb-8 bg-slate-900/50 p-1 rounded-xl border border-white/5 w-fit">
-          <button onClick={() => setActiveTab('stats')} className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><BarChart3 size={14} /> Statistici</button>
-          <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><UserPlus size={14} /> Utilizatori</button>
-          <button onClick={() => setActiveTab('stripe')} className={`px-6 py-2.5 rounded-lg font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stripe' ? 'bg-[#635BFF] text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}><CreditCard size={14} /> Plăți Stripe</button>
+        <div className="flex flex-wrap gap-2 mb-8 bg-slate-900/50 p-1.5 rounded-2xl border border-white/5 w-fit">
+          <button onClick={() => setActiveTab('stats')} className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stats' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}><BarChart3 size={14} /> Statistici</button>
+          <button onClick={() => setActiveTab('users')} className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'users' ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20' : 'text-slate-500 hover:text-slate-300'}`}><UserPlus size={14} /> Utilizatori</button>
+          <button onClick={() => setActiveTab('stripe')} className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'stripe' ? 'bg-[#635BFF] text-white shadow-lg shadow-[#635BFF]/20' : 'text-slate-500 hover:text-slate-300'}`}><CreditCard size={14} /> Plăți Stripe</button>
+          <button onClick={() => setActiveTab('billing')} className={`px-6 py-2.5 rounded-xl font-black text-[10px] uppercase tracking-widest transition-all flex items-center gap-2 ${activeTab === 'billing' ? 'bg-amber-600 text-white shadow-lg shadow-amber-500/20' : 'text-slate-500 hover:text-slate-300'}`}><Calculator size={14} /> {t.apiBillingTab}</button>
         </div>
 
         {activeTab === 'stats' && (
@@ -251,6 +261,73 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ t, onClose, user
                 </tbody>
               </table>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'billing' && (
+          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+             <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="p-8 bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl">
+                   <div className="p-3 bg-amber-500 rounded-2xl w-fit mb-4"><Calculator size={20} className="text-white" /></div>
+                   <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{t.estCost}</div>
+                   <div className="text-3xl font-black text-white">${apiUsage.estimatedCost.toFixed(4)}</div>
+                </div>
+                <div className="p-8 bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl">
+                   <div className="p-3 bg-indigo-500 rounded-2xl w-fit mb-4"><Activity size={20} className="text-white" /></div>
+                   <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">{t.totalReq}</div>
+                   <div className="text-3xl font-black text-white">{apiUsage.totalRequests}</div>
+                </div>
+                <div className="p-8 bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl">
+                   <div className="p-3 bg-slate-700 rounded-2xl w-fit mb-4"><Zap size={20} className="text-white" /></div>
+                   <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Flash 2.5 Requests</div>
+                   <div className="text-3xl font-black text-white">{apiUsage.flashRequests}</div>
+                </div>
+                <div className="p-8 bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-3xl shadow-2xl">
+                   <div className="p-3 bg-purple-600 rounded-2xl w-fit mb-4"><Sparkles size={20} className="text-white" /></div>
+                   <div className="text-[10px] font-black uppercase text-slate-500 tracking-widest mb-1">Pro 3 Requests</div>
+                   <div className="text-3xl font-black text-white">{apiUsage.proRequests}</div>
+                </div>
+             </div>
+
+             <div className="bg-slate-900/40 backdrop-blur-xl border border-white/5 rounded-[2.5rem] p-10 flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 space-y-6">
+                   <h3 className="text-2xl font-black text-white uppercase tracking-tight">{t.costPerModel}</h3>
+                   <div className="space-y-6">
+                      <div className="space-y-2">
+                         <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-500">
+                            <span>Gemini 2.5 Flash</span>
+                            <span className="text-indigo-400">{(apiUsage.flashRequests / (apiUsage.totalRequests || 1) * 100).toFixed(0)}%</span>
+                         </div>
+                         <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-indigo-500 rounded-full transition-all duration-1000" style={{ width: `${(apiUsage.flashRequests / (apiUsage.totalRequests || 1) * 100)}%` }}></div>
+                         </div>
+                      </div>
+                      <div className="space-y-2">
+                         <div className="flex justify-between text-xs font-black uppercase tracking-widest text-slate-500">
+                            <span>Gemini 3 Pro</span>
+                            <span className="text-purple-400">{(apiUsage.proRequests / (apiUsage.totalRequests || 1) * 100).toFixed(0)}%</span>
+                         </div>
+                         <div className="h-3 w-full bg-slate-800 rounded-full overflow-hidden">
+                            <div className="h-full bg-purple-500 rounded-full transition-all duration-1000" style={{ width: `${(apiUsage.proRequests / (apiUsage.totalRequests || 1) * 100)}%` }}></div>
+                         </div>
+                      </div>
+                   </div>
+                   <p className="text-xs text-slate-500 leading-relaxed max-w-lg">
+                      {t.billingDesc}
+                   </p>
+                </div>
+                <div className="shrink-0 flex flex-col items-center justify-center p-10 border border-white/5 bg-slate-950/50 rounded-[2rem] text-center">
+                   <Calculator size={48} className="text-indigo-400 mb-6 opacity-30" />
+                   <div className="text-[10px] font-black uppercase text-slate-500 tracking-[0.3em] mb-4">Cheltuială Estimată</div>
+                   <div className="text-5xl font-black text-white mb-8">${apiUsage.estimatedCost.toFixed(3)}</div>
+                   <button 
+                     onClick={onResetApiUsage}
+                     className="px-8 py-3 bg-red-600/10 hover:bg-red-600 text-red-500 hover:text-white border border-red-500/20 rounded-xl transition-all font-black uppercase text-[10px] tracking-widest"
+                   >
+                     {t.resetCounter}
+                   </button>
+                </div>
+             </div>
           </div>
         )}
       </div>

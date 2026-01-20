@@ -1,10 +1,12 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Palette, Key, Sparkles, RefreshCcw, AlertCircle } from 'lucide-react';
+import { Palette, Key, Sparkles, RefreshCcw, AlertCircle, LayoutDashboard, LogOut } from 'lucide-react';
 import { generateImage } from './services/geminiService';
-import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry } from './types';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry, ApiUsage } from './types';
 import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
+import { Login } from './components/Login';
+import { AdminDashboard } from './components/AdminDashboard';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
@@ -23,9 +25,21 @@ const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.Cartoon]: "vibrant cartoon illustration, clean outlines"
 };
 
+const DEFAULT_API_USAGE: ApiUsage = {
+  totalRequests: 0,
+  flashRequests: 0,
+  proRequests: 0,
+  estimatedCost: 0
+};
+
+const FLASH_COST_PER_IMG = 0.0001;
+const PRO_COST_PER_IMG = 0.005;
+
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ro');
   const [mode, setMode] = useState<AppMode>('generate');
+  const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('studio-current-user'));
+  const [isAdminOpen, setIsAdminOpen] = useState(false);
   
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
@@ -37,6 +51,10 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [apiUsage, setApiUsage] = useState<ApiUsage>(() => {
+    const saved = localStorage.getItem('studio-api-usage');
+    return saved ? JSON.parse(saved) : DEFAULT_API_USAGE;
+  });
   const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
 
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
@@ -57,12 +75,26 @@ const App: React.FC = () => {
     if (saved) setHistory(JSON.parse(saved));
   }, []);
 
+  useEffect(() => {
+    localStorage.setItem('studio-api-usage', JSON.stringify(apiUsage));
+  }, [apiUsage]);
+
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
       setHasApiKeySelected(true);
       setError(null);
     }
+  };
+
+  const handleLogin = (email: string) => {
+    setUserEmail(email);
+    localStorage.setItem('studio-current-user', email);
+  };
+
+  const handleLogout = () => {
+    setUserEmail(null);
+    localStorage.removeItem('studio-current-user');
   };
 
   const onReferenceImageSelect = (file: File) => {
@@ -77,8 +109,17 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
+  const updateApiUsage = (model: ImageModel) => {
+    const cost = model === ImageModel.Flash ? FLASH_COST_PER_IMG : PRO_COST_PER_IMG;
+    setApiUsage(prev => ({
+      totalRequests: prev.totalRequests + 1,
+      flashRequests: prev.flashRequests + (model === ImageModel.Flash ? 1 : 0),
+      proRequests: prev.proRequests + (model === ImageModel.Pro ? 1 : 0),
+      estimatedCost: prev.estimatedCost + cost
+    }));
+  };
+
   const handleGenerate = useCallback(async () => {
-    // Validare: Avem nevoie de imagine sursă pentru Erase/Remove BG/Sketch/Watercolor/Pexar dacă nu e Generate pur
     if (mode !== 'generate' && !refImage1) {
       setError("Te rugăm să încarci o imagine sursă pentru a folosi această funcție.");
       return;
@@ -112,12 +153,16 @@ const App: React.FC = () => {
 
       finalUrl = await generateImage(finalPrompt, aspectRatio, resolution, imageModel, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
       
+      // Update billing tracking
+      updateApiUsage(imageModel);
+
       setResultUrl(finalUrl);
       const newEntry: HistoryEntry = {
         id: Math.random().toString(36).substr(2, 9),
         url: finalUrl,
         prompt: prompt || (mode === 'watercolor' ? "Watercolor Art" : (mode === 'pencil-sketch' ? "Pencil Sketch" : (mode === 'erase' ? "Object Erase" : (mode === 'pexar' ? "Pexar 3D" : "AI Creation")))),
-        timestamp: Date.now()
+        timestamp: Date.now(),
+        modelUsed: imageModel
       };
       const updatedHistory = [newEntry, ...history].slice(0, 20);
       setHistory(updatedHistory);
@@ -135,6 +180,12 @@ const App: React.FC = () => {
     }
   }, [prompt, refImage1, style, aspectRatio, resolution, mode, imageModel, history, t]);
 
+  if (!userEmail) {
+    return <Login t={t} onLogin={handleLogin} />;
+  }
+
+  const isAdmin = userEmail === 'doru373@gmail.com';
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
       <nav className="border-b border-white/5 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50 h-20">
@@ -144,23 +195,44 @@ const App: React.FC = () => {
               <Palette size={26} className="text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-black tracking-tighter leading-none">NANO BANANA STUDIO</h1>
+              <h1 className="text-xl font-black tracking-tighter leading-none uppercase">{t.appTitle}</h1>
               <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 block tracking-[0.2em]">Workspace Activ</span>
             </div>
           </div>
           
           <div className="flex items-center gap-6">
-            <div className="flex bg-slate-800/50 p-1 rounded-full border border-white/5">
+            <div className="hidden md:flex bg-slate-800/50 p-1 rounded-full border border-white/5">
               {(['en', 'ro', 'fr'] as Language[]).map((l) => (
                 <button key={l} onClick={() => setLang(l)} className={`px-4 py-1.5 text-[10px] font-black rounded-full transition-all ${lang === l ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}>
                   {l.toUpperCase()}
                 </button>
               ))}
             </div>
-            <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}>
-              <Key size={14} />
-              <span>{t.apiKeyBtn}</span>
-            </button>
+            
+            <div className="flex items-center gap-3">
+              {isAdmin && (
+                <button 
+                  onClick={() => setIsAdminOpen(true)}
+                  className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl transition-all border border-white/5"
+                  title="Admin Dashboard"
+                >
+                  <LayoutDashboard size={20} />
+                </button>
+              )}
+              
+              <button 
+                onClick={handleLogout}
+                className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-xl transition-all border border-white/5"
+                title="Sign Out"
+              >
+                <LogOut size={20} />
+              </button>
+
+              <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}>
+                <Key size={14} />
+                <span className="hidden sm:inline">{t.apiKeyBtn}</span>
+              </button>
+            </div>
           </div>
         </div>
       </nav>
@@ -184,14 +256,14 @@ const App: React.FC = () => {
           <button 
             onClick={handleGenerate} 
             disabled={isLoading} 
-            className={`w-full py-5 rounded-3xl font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
+            className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
           >
             {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
             {mode === 'generate' ? t.generateBtn : (mode === 'erase' ? t.eraseBtn : (mode === 'remove-bg' ? t.removeBgBtn : (mode === 'pencil-sketch' ? t.pencilBtn : (mode === 'watercolor' ? t.modeWatercolor : t.modePexar))))}
           </button>
 
           {error && (
-            <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-2xl flex gap-3 text-red-400 text-xs animate-in shake-in-x duration-500">
+            <div className="p-5 bg-red-900/20 border border-red-500/30 rounded-3xl flex gap-3 text-red-400 text-xs animate-in shake-in-x duration-500 shadow-2xl">
               <AlertCircle size={18} className="shrink-0" />
               <p>{error}</p>
             </div>
@@ -213,6 +285,17 @@ const App: React.FC = () => {
           Creativitate asistată de AI. © {new Date().getFullYear()} Image Studio.
         </p>
       </footer>
+
+      {isAdminOpen && (
+        <AdminDashboard 
+          t={t} 
+          onClose={() => setIsAdminOpen(false)} 
+          users={[]} // În mod normal aici ar veni lista din localStorage
+          onUpdateUser={() => {}} 
+          apiUsage={apiUsage}
+          onResetApiUsage={() => setApiUsage(DEFAULT_API_USAGE)}
+        />
+      )}
     </div>
   );
 };

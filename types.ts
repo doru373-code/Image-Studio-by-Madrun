@@ -35,6 +35,21 @@ export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'wa
 
 export type Language = 'en' | 'fr' | 'ro';
 
+export interface ApiUsage {
+  totalRequests: number;
+  flashRequests: number;
+  proRequests: number;
+  estimatedCost: number; // in USD
+}
+
+export interface HistoryEntry {
+  id: string;
+  url: string;
+  prompt: string;
+  timestamp: number;
+  modelUsed: ImageModel;
+}
+
 export interface HistoryEntry {
   id: string;
   url: string;

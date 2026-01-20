@@ -1,4 +1,3 @@
-
 import { ArtStyle } from './types';
 
 export const translations = {
@@ -19,7 +18,6 @@ export const translations = {
       unlimited: "Unlimited Fast Generations",
       cloning: "Advanced Character Cloning",
       resolution: "Ultra-High 4K Resolution",
-      // Fix: Added missing 'video' property
       video: "Cinematic AI Video",
       noWatermark: "No Watermarks",
       priority: "Priority GPU Access"
@@ -90,6 +88,12 @@ export const translations = {
     diskSyncDesc: "Images will be auto-saved to your disk.",
     diskSyncSaved: "Image saved to local disk.",
     diskSyncError: "Disk access error. Please re-link folder.",
+    apiBillingTab: "API Billing",
+    estCost: "Estimated API Cost",
+    totalReq: "Total Requests",
+    costPerModel: "Cost Breakdown",
+    resetCounter: "Reset Counters",
+    billingDesc: "Estimates are based on standard Gemini API pricing. Actual costs may vary in your Google Cloud Console.",
     dreamingImage: "Dreaming up your creation...",
     waitImage: "This usually takes 5-10 seconds",
     creationAppear: "Your creations will appear here",
@@ -103,7 +107,6 @@ export const translations = {
     grayscale: "Grayscale",
     sepia: "Sepia",
     invert: "Invert",
-    // Fix: Added missing Admin Dashboard keys
     adminDashboard: "Admin Dashboard",
     totalUsers: "Total Users",
     activeSubscribers: "Active Subscribers",
@@ -117,7 +120,6 @@ export const translations = {
     createDiscount: "Create Discount",
     discountPlaceholder: "CODE50",
     activeDiscounts: "Active Discounts",
-    // Fix: Added missing Policy keys
     privacyPolicy: "Privacy Policy",
     termsOfService: "Terms of Service",
     styles: {
@@ -154,7 +156,6 @@ export const translations = {
       unlimited: "Generări Rapide Nelimitate",
       cloning: "Clonare Personaje Avansată",
       resolution: "Rezoluție Ultra-High 4K",
-      // Fix: Added missing 'video' property
       video: "Video Cinematic AI",
       noWatermark: "Fără Watermark",
       priority: "Acces Prioritar GPU"
@@ -225,6 +226,12 @@ export const translations = {
     diskSyncDesc: "Imaginile vor fi salvate automat pe disk.",
     diskSyncSaved: "Imagine salvată pe disc.",
     diskSyncError: "Eroare acces disc. Reconectează folderul.",
+    apiBillingTab: "Facturare API",
+    estCost: "Cost API Estimat",
+    totalReq: "Total Cereri",
+    costPerModel: "Distribuție Costuri",
+    resetCounter: "Resetează Contoarele",
+    billingDesc: "Estimările se bazează pe prețurile standard Gemini API. Costurile reale pot varia în Google Cloud Console.",
     dreamingImage: "Se generează creația...",
     waitImage: "Durează de obicei 5-10 secunde",
     creationAppear: "Creațiile tale vor apărea aici",
@@ -238,7 +245,6 @@ export const translations = {
     grayscale: "Alb-negru",
     sepia: "Sepia",
     invert: "Invert",
-    // Fix: Added missing Admin Dashboard keys
     adminDashboard: "Panou Administrator",
     totalUsers: "Utilizatori Totali",
     activeSubscribers: "Abonați Activi",
@@ -252,7 +258,6 @@ export const translations = {
     createDiscount: "Creează Cod Reducere",
     discountPlaceholder: "COD50",
     activeDiscounts: "Reduceri Active",
-    // Fix: Added missing Policy keys
     privacyPolicy: "Politica de Confidențialitate",
     termsOfService: "Termeni și Condiții",
     styles: {
@@ -289,7 +294,6 @@ export const translations = {
       unlimited: "Générations Rapides Illimitées",
       cloning: "Clonage de Personnage Avancé",
       resolution: "Résolution Ultra-High 4K",
-      // Fix: Added missing 'video' property
       video: "Vidéo Cinematic AI",
       noWatermark: "Sans Filigrane",
       priority: "Accès GPU Prioritaire"
@@ -360,6 +364,12 @@ export const translations = {
     diskSyncDesc: "Sauvegarde auto sur disque.",
     diskSyncSaved: "Image sauvée sur disque.",
     diskSyncError: "Erreur disque. Re-lier le dossier.",
+    apiBillingTab: "Facturation API",
+    estCost: "Coût API Estimé",
+    totalReq: "Total Requêtes",
+    costPerModel: "Coût par Modèle",
+    resetCounter: "Réinitialiser",
+    billingDesc: "Les estimations sont basées sur les tarifs standard. Les coûts réels peuvent varier.",
     dreamingImage: "Création...",
     waitImage: "5-10 secondes",
     creationAppear: "Vos créations ici",
@@ -373,7 +383,6 @@ export const translations = {
     grayscale: "Gris",
     sepia: "Sépia",
     invert: "Inverser",
-    // Fix: Added missing Admin Dashboard keys
     adminDashboard: "Tableau de Bord Admin",
     totalUsers: "Utilisateurs Totaux",
     activeSubscribers: "Abonnés Actifs",
@@ -387,7 +396,6 @@ export const translations = {
     createDiscount: "Créer une Remise",
     discountPlaceholder: "PROMO50",
     activeDiscounts: "Remises Actives",
-    // Fix: Added missing Policy keys
     privacyPolicy: "Politique de Confidentialité",
     termsOfService: "Conditions d'Utilisation",
     styles: {
