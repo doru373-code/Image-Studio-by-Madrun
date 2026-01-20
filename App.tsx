@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Palette, Key, Sparkles, RefreshCcw, Image as ImageIcon, Video, Pencil, Scissors, Eraser } from 'lucide-react';
+import { Palette, Key, Sparkles, RefreshCcw, AlertCircle } from 'lucide-react';
 import { generateImage, generateVideo } from './services/geminiService';
 import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution, ImageModel, HistoryEntry } from './types';
 import { translations } from './translations';
@@ -41,25 +41,19 @@ const App: React.FC = () => {
   const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
 
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
-  const [refImage2, setRefImage2] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
   const t = useMemo(() => translations[lang], [lang]);
 
-  // Verificare cheie API o dată la pornire și la cerere, fără loop infinit
   useEffect(() => {
     const checkKey = async () => {
       if (window.aistudio) {
         try {
           const selected = await window.aistudio.hasSelectedApiKey();
           setHasApiKeySelected(selected);
-        } catch (e) {
-          console.warn("API Key check skipped - environment might not support aistudio global.");
-        }
+        } catch (e) {}
       }
     };
     checkKey();
-    
-    // Încarcă istoricul
     const saved = localStorage.getItem('nano-studio-history');
     if (saved) setHistory(JSON.parse(saved));
   }, []);
@@ -69,12 +63,10 @@ const App: React.FC = () => {
       await window.aistudio.openSelectKey();
       setHasApiKeySelected(true);
       setError(null);
-    } else {
-      alert("Configurarea cheii API este gestionată de mediul AI Studio.");
     }
   };
 
-  const onReferenceImageSelect = (file: File, slot: 1 | 2 | 3) => {
+  const onReferenceImageSelect = (file: File) => {
     const reader = new FileReader();
     reader.onloadend = () => {
       const result = reader.result as string;
@@ -122,7 +114,12 @@ const App: React.FC = () => {
       localStorage.setItem('nano-studio-history', JSON.stringify(updatedHistory));
 
     } catch (err: any) {
-      setError(err.message || t.errorGeneric);
+      const msg = err.message || t.errorGeneric;
+      if (msg.includes("503") || msg.includes("overloaded")) {
+        setError("Serverul Gemini este momentan supraîncărcat. Am încercat de câteva ori, te rugăm să reîncerci peste un minut.");
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -138,7 +135,7 @@ const App: React.FC = () => {
             </div>
             <div>
               <h1 className="text-xl font-black tracking-tighter leading-none">NANO BANANA STUDIO</h1>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 block">Powered by Gemini 2.5</span>
+              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 block tracking-[0.2em]">Workspace Activ</span>
             </div>
           </div>
           
@@ -150,7 +147,7 @@ const App: React.FC = () => {
                 </button>
               ))}
             </div>
-            <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black' : 'bg-slate-800 border border-white/10'}`}>
+            <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}>
               <Key size={14} />
               <span>{t.apiKeyBtn}</span>
             </button>
@@ -179,11 +176,18 @@ const App: React.FC = () => {
           <button 
             onClick={handleGenerate} 
             disabled={isLoading} 
-            className={`w-full py-5 rounded-3xl font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800 opacity-50' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
+            className={`w-full py-5 rounded-3xl font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
           >
             {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
             {mode === 'video' ? t.generateVideoBtn : t.generateBtn}
           </button>
+
+          {error && (
+            <div className="p-4 bg-red-900/20 border border-red-500/30 rounded-2xl flex gap-3 text-red-400 text-xs animate-in shake-in-x duration-500">
+              <AlertCircle size={18} className="shrink-0" />
+              <p>{error}</p>
+            </div>
+          )}
         </div>
 
         <div className="lg:col-span-8">
@@ -196,9 +200,9 @@ const App: React.FC = () => {
         </div>
       </main>
 
-      <footer className="border-t border-white/5 py-8 text-center bg-slate-900/20">
+      <footer className="border-t border-white/5 py-8 text-center bg-slate-900/20 mt-auto">
         <p className="text-[10px] font-black text-slate-600 uppercase tracking-widest">
-          Build simple, create better. © {new Date().getFullYear()} Studio by Madrun.
+          Creativitate asistată de AI. © {new Date().getFullYear()} Image Studio.
         </p>
       </footer>
     </div>
