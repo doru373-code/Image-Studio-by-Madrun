@@ -1,6 +1,6 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Palette, Key, Sparkles, RefreshCcw, ShieldCheck } from 'lucide-react';
+import { Palette, Key, Sparkles, RefreshCcw, ShieldCheck, AlertCircle } from 'lucide-react';
 import { generateImage, generateVideo } from './services/geminiService';
 import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, VideoResolution, ImageModel, HistoryEntry } from './types';
 import { translations } from './translations';
@@ -46,13 +46,27 @@ const App: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
 
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
   const [refImage2, setRefImage2] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
   const t = useMemo(() => translations[lang], [lang]);
-
   const [users, setUsers] = useState<any[]>([]);
+
+  // Proactive Key Check
+  useEffect(() => {
+    const checkKey = async () => {
+      if (window.aistudio) {
+        const selected = await window.aistudio.hasSelectedApiKey();
+        setHasApiKeySelected(selected);
+      }
+    };
+    checkKey();
+    // Re-check periodically if key selection is pending
+    const interval = setInterval(checkKey, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Load history from Local Storage
   useEffect(() => {
@@ -77,7 +91,7 @@ const App: React.FC = () => {
       timestamp: Date.now(),
       type
     };
-    setHistory(prev => [newEntry, ...prev].slice(0, 30)); // Keep last 30 entries
+    setHistory(prev => [newEntry, ...prev].slice(0, 30));
   };
 
   const isCurrentUserAdmin = useMemo(() => {
@@ -143,6 +157,7 @@ const App: React.FC = () => {
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
+      setHasApiKeySelected(true); // Assume success per instructions
       setError(null);
     }
   };
@@ -165,7 +180,10 @@ const App: React.FC = () => {
     if (!resultUrl) return;
     if (window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) await window.aistudio.openSelectKey();
+      if (!hasKey) {
+        await window.aistudio.openSelectKey();
+        setHasApiKeySelected(true);
+      }
     }
     setIsLoading(true);
     setError(null);
@@ -191,7 +209,11 @@ const App: React.FC = () => {
       setResultUrl(upscaledImage);
       addToHistory(upscaledImage, 'image');
     } catch (err: any) {
-      setError(err.message || t.errorGeneric);
+      if (err.message?.includes("Requested entity was not found")) {
+        handleApiKeyFix();
+      } else {
+        setError(err.message || t.errorGeneric);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -206,10 +228,16 @@ const App: React.FC = () => {
       setError(t.uploadImageRequired);
       return;
     }
+    
+    // Check key for Pro/Video models
     if ((mode === 'video' || imageModel === ImageModel.Pro) && window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) await window.aistudio.openSelectKey();
+      if (!hasKey) {
+        await window.aistudio.openSelectKey();
+        setHasApiKeySelected(true);
+      }
     }
+
     setIsLoading(true);
     setError(null);
     try {
@@ -238,7 +266,11 @@ const App: React.FC = () => {
         addToHistory(image, 'image');
       }
     } catch (err: any) {
-      setError(err.message || t.errorGeneric);
+      if (err.message?.includes("Requested entity was not found")) {
+        handleApiKeyFix();
+      } else {
+        setError(err.message || t.errorGeneric);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -285,11 +317,27 @@ const App: React.FC = () => {
                 <button key={l} onClick={() => setLang(l)} className={`px-3 py-1.5 text-[10px] font-black rounded-full transition-all ${lang === l ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-200'}`}>{l.toUpperCase()}</button>
               ))}
             </div>
-            <button onClick={handleApiKeyFix} className="hidden md:flex items-center gap-2 px-4 py-2 bg-slate-800/80 border border-white/10 rounded-xl text-[10px] font-bold hover:bg-slate-700 transition-all"><Key size={14} className="text-amber-400" /><span>{t.apiKeyBtn}</span></button>
+            <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-4 py-2 rounded-xl text-[10px] font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse shadow-lg shadow-amber-500/20' : 'bg-slate-800/80 border border-white/10 text-white hover:bg-slate-700'}`}>
+              <Key size={14} className={!hasApiKeySelected ? 'text-black' : 'text-amber-400'} />
+              <span>{t.apiKeyBtn}</span>
+            </button>
             <button onClick={handleLogout} className="px-4 py-2 text-slate-400 hover:text-white text-[10px] font-black uppercase tracking-widest transition-colors">Sign Out</button>
           </div>
         </div>
       </nav>
+
+      {/* Global API Key Warning */}
+      {!hasApiKeySelected && (
+        <div className="bg-amber-500/10 border-b border-amber-500/20 py-2 px-6">
+          <div className="max-w-[1440px] mx-auto flex items-center justify-between text-amber-400 text-[10px] font-black uppercase tracking-widest">
+            <div className="flex items-center gap-2">
+              <AlertCircle size={14} />
+              <span>Configurare API Necesară pentru Pro & Video</span>
+            </div>
+            <button onClick={handleApiKeyFix} className="underline hover:text-white">Configurează Acum</button>
+          </div>
+        </div>
+      )}
 
       <main className="flex-1 max-w-[1440px] mx-auto w-full p-6 lg:p-10 grid lg:grid-cols-12 gap-10">
         <div className="lg:col-span-4 space-y-10">
