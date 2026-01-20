@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Palette, Key, Sparkles, RefreshCcw, AlertCircle, LayoutDashboard, LogOut } from 'lucide-react';
 import { generateImage } from './services/geminiService';
@@ -69,7 +70,6 @@ const App: React.FC = () => {
       const saved = localStorage.getItem('nano-studio-history');
       if (saved) setHistory(JSON.parse(saved));
 
-      // Reconstruct user list for admin dashboard
       const localUsers = JSON.parse(localStorage.getItem('studio-local-users') || '[]');
       const formattedUsers: UserRecord[] = [
         { id: 'admin-super', email: 'doru373@gmail.com', role: 'admin', subscription: 'pro', joinDate: '2023-01-01' },
@@ -97,7 +97,9 @@ const App: React.FC = () => {
         try {
           const selected = await window.aistudio.hasSelectedApiKey();
           setHasApiKeySelected(selected);
-        } catch (e) {}
+        } catch (e) {
+          setHasApiKeySelected(false);
+        }
       }
     };
     checkKey();
@@ -110,6 +112,7 @@ const App: React.FC = () => {
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
+      // Resetăm starea după deschidere conform ghidului (mitigare race condition)
       setHasApiKeySelected(true);
       setError(null);
     }
@@ -150,11 +153,14 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = useCallback(async () => {
-    if (imageModel === ImageModel.Pro && window.aistudio) {
+    // Verificăm cheia API înainte de start
+    if (window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
+        setHasApiKeySelected(false);
+        setError("Vă rugăm să selectați o cheie API folosind butonul de configurare.");
         await handleApiKeyFix();
-        // Assume key selection was successful after triggering openSelectKey
+        return;
       }
     }
 
@@ -178,18 +184,24 @@ const App: React.FC = () => {
       if (mode === 'remove-bg') {
         finalPrompt = "Isolate the main subject and remove the background perfectly. Make it a clean studio cutout.";
       } else if (mode === 'erase') {
-        finalPrompt = `Please identify and erase the following from the image: ${prompt}. After erasing, fill the resulting empty area by seamlessly recreating the background textures, lighting, and details to match the surroundings perfectly. No artifacts should be left behind.`.trim();
+        finalPrompt = `Please identify and erase the following from the image: ${prompt}. After erasing, fill the resulting empty area by seamlessly recreating the background textures, lighting, and details to match the surroundings perfectly.`.trim();
       } else if (mode === 'pencil-sketch') {
-        finalPrompt = `Professional graphite pencil sketch of the subject in the image. Use cross-hatching and fine line art. Artistic manual drawing style, detailed shading, HB and 2B pencil lead textures, realistic graphite on high-quality sketchpad paper. No colors.`.trim();
+        finalPrompt = `Professional graphite pencil sketch of the subject in the image. Cross-hatching, fine line art, realistic lead textures, HB and 2B style shading.`.trim();
       } else if (mode === 'watercolor') {
-        finalPrompt = `Professional watercolor painting based on this image. Wet-on-wet technique, vibrant color washes, artistic heavy-grain paper texture, high detail, artistic brushstrokes.`.trim();
+        finalPrompt = `Professional watercolor painting based on this image. Wet-on-wet technique, vibrant washes, artistic heavy-grain paper texture.`.trim();
       } else if (mode === 'pexar') {
         finalPrompt = `Transform the scene into a ${STYLE_PROMPTS[ArtStyle.Pexar]}. Original context: ${prompt}`.trim();
       } else {
         finalPrompt = `${STYLE_PROMPTS[style]} ${prompt}`.trim();
       }
 
-      finalUrl = await generateImage(finalPrompt, aspectRatio, resolution, imageModel, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
+      finalUrl = await generateImage(
+        finalPrompt, 
+        aspectRatio, 
+        resolution, 
+        imageModel, 
+        refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined
+      );
       
       updateApiUsage(imageModel);
 
@@ -197,7 +209,7 @@ const App: React.FC = () => {
       const newEntry: HistoryEntry = {
         id: Math.random().toString(36).substr(2, 9),
         url: finalUrl,
-        prompt: prompt || (mode === 'watercolor' ? "Watercolor Art" : (mode === 'pencil-sketch' ? "Pencil Sketch" : (mode === 'erase' ? "Object Erase" : (mode === 'pexar' ? "Pexar 3D" : "AI Creation")))),
+        prompt: prompt || mode.replace('-', ' '),
         timestamp: Date.now(),
         modelUsed: imageModel
       };
@@ -207,11 +219,15 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       const msg = err.message || t.errorGeneric;
-      if (msg.includes("503") || msg.includes("overloaded")) {
-        setError("Serverul Gemini este momentan supraîncărcat. Am încercat de câteva ori, te rugăm să reîncerci peste un minut.");
-      } else if (msg.includes("Requested entity was not found")) {
+      console.error("Generation Error:", err);
+
+      if (msg.includes("Requested entity was not found") || (err.status === 404)) {
         setHasApiKeySelected(false);
-        setError("Requested entity was not found. Please select your API key again via the Configuration button.");
+        setError("Cheia API a expirat sau nu a fost găsită. Vă rugăm să o selectați din nou.");
+        // Conform ghidului, resetăm starea și cerem re-selecția
+        window.aistudio?.openSelectKey();
+      } else if (msg.includes("503") || msg.includes("overloaded")) {
+        setError("Serverele sunt ocupate. Vă rugăm să reîncercați în câteva secunde.");
       } else {
         setError(msg);
       }
@@ -272,7 +288,10 @@ const App: React.FC = () => {
                 <LogOut size={20} />
               </button>
 
-              <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}>
+              <button 
+                onClick={handleApiKeyFix} 
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}
+              >
                 <Key size={14} />
                 <span className="hidden sm:inline">{t.apiKeyBtn}</span>
               </button>
