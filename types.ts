@@ -5,9 +5,7 @@ export enum AspectRatio {
   Ratio3_4 = "3:4",
   Ratio16_9 = "16:9",
   Ratio9_16 = "9:16",
-  RatioA4 = "A4",
-  Ratio8_5_11 = "8.5:11",
-  Ratio8_5_8_5 = "8.5:8.5"
+  RatioA4 = "A4"
 }
 
 export enum ArtStyle {

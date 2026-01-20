@@ -24,10 +24,8 @@ export const generateImage = async (
 
   // Map non-standard ratios to closest valid Gemini API ratios
   let apiRatio: string = aspectRatio;
-  if (aspectRatio === AspectRatio.RatioA4 || aspectRatio === AspectRatio.Ratio8_5_11) {
+  if (aspectRatio === AspectRatio.RatioA4) {
     apiRatio = "3:4";
-  } else if (aspectRatio === AspectRatio.Ratio8_5_8_5) {
-    apiRatio = "1:1";
   }
 
   const imageConfig: any = {

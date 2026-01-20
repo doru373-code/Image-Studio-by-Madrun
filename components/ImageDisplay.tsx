@@ -56,7 +56,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
   const [isFullSizeOpen, setIsFullSizeOpen] = useState(false);
   const [editSettings, setEditSettings] = useState<EditSettings>(DEFAULT_SETTINGS);
 
-  const isPortrait = aspectRatio === AspectRatio.Ratio9_16 || aspectRatio === AspectRatio.Ratio3_4 || aspectRatio === AspectRatio.Ratio4_5 || aspectRatio === AspectRatio.RatioA4 || aspectRatio === AspectRatio.Ratio8_5_11;
+  const isPortrait = aspectRatio === AspectRatio.Ratio9_16 || aspectRatio === AspectRatio.Ratio3_4 || aspectRatio === AspectRatio.Ratio4_5 || aspectRatio === AspectRatio.RatioA4;
 
   const handleDownload = () => {
     if (imageUrl) {

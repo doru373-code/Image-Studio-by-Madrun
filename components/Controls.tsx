@@ -319,18 +319,17 @@ export const Controls: React.FC<ControlsProps> = ({
           <label className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
             {t.aspectRatio}
           </label>
-          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-8 gap-2">
+          <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2">
             {Object.entries(AspectRatio)
-              .filter(([_, value]) => mode !== 'video' || (value === '16:9' || value === '9:16' || value === '1:1' || value === '8.5:8.5'))
+              .filter(([_, value]) => mode !== 'video' || (value === '16:9' || value === '9:16' || value === '1:1'))
               .map(([key, value]) => {
                 let h = '14px';
-                if (value === '1:1' || value === '8.5:8.5') h = '14px';
+                if (value === '1:1') h = '14px';
                 else if (value === '4:5') h = '18px';
                 else if (value === '3:4') h = '20px';
                 else if (value === '16:9') h = '8px';
                 else if (value === '9:16') h = '24px';
                 else if (value === 'A4') h = '21px';
-                else if (value === '8.5:11') h = '19px';
 
                 return (
                   <button
@@ -350,7 +349,7 @@ export const Controls: React.FC<ControlsProps> = ({
                       style={{ width: '14px', height: h }} 
                     />
                     <span className="text-[8px] font-black">
-                      {value === '8.5:11' ? '8.5x11"' : value === '8.5:8.5' ? '8.5x8.5"' : value}
+                      {value}
                     </span>
                   </button>
                 );

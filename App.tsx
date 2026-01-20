@@ -215,7 +215,7 @@ const App: React.FC = () => {
     try {
       if (mode === 'video') {
         const vRatio = (aspectRatio === AspectRatio.Ratio9_16) ? '9:16' : 
-                       (aspectRatio === AspectRatio.Ratio1_1 || aspectRatio === AspectRatio.Ratio8_5_8_5) ? '1:1' : 
+                       (aspectRatio === AspectRatio.Ratio1_1) ? '1:1' : 
                        '16:9';
                        
         const video = await generateVideo(
