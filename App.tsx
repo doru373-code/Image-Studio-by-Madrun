@@ -9,6 +9,7 @@ import { ImageDisplay } from './components/ImageDisplay';
 import { Login, PREDEFINED_PRO_ACCOUNTS } from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LandingPage } from './components/LandingPage';
+import { getAllHistory, saveHistoryEntry, clearAllHistory } from './services/historyDb';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
@@ -66,9 +67,12 @@ const App: React.FC = () => {
   const t = useMemo(() => translations[lang], [lang]);
 
   useEffect(() => {
-    const loadData = () => {
-      const saved = localStorage.getItem('nano-studio-history');
-      if (saved) setHistory(JSON.parse(saved));
+    const loadData = async () => {
+      // Migrare și curățare LocalStorage vechi pentru a elibera spațiu
+      localStorage.removeItem('nano-studio-history'); 
+      
+      const savedHistory = await getAllHistory();
+      setHistory(savedHistory);
 
       const localUsers = JSON.parse(localStorage.getItem('studio-local-users') || '[]');
       const formattedUsers: UserRecord[] = [
@@ -106,13 +110,16 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('studio-api-usage', JSON.stringify(apiUsage));
+    try {
+      localStorage.setItem('studio-api-usage', JSON.stringify(apiUsage));
+    } catch (e) {
+      console.warn("Storage usage full, but billing data is small, should be fine.");
+    }
   }, [apiUsage]);
 
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      // Resetăm starea după deschidere conform ghidului (mitigare race condition)
       setHasApiKeySelected(true);
       setError(null);
     }
@@ -152,8 +159,12 @@ const App: React.FC = () => {
     }));
   };
 
+  const handleClearHistory = async () => {
+    await clearAllHistory();
+    setHistory([]);
+  };
+
   const handleGenerate = useCallback(async () => {
-    // Verificăm cheia API înainte de start
     if (window.aistudio) {
       const hasKey = await window.aistudio.hasSelectedApiKey();
       if (!hasKey) {
@@ -184,11 +195,11 @@ const App: React.FC = () => {
       if (mode === 'remove-bg') {
         finalPrompt = "Isolate the main subject and remove the background perfectly. Make it a clean studio cutout.";
       } else if (mode === 'erase') {
-        finalPrompt = `Please identify and erase the following from the image: ${prompt}. After erasing, fill the resulting empty area by seamlessly recreating the background textures, lighting, and details to match the surroundings perfectly.`.trim();
+        finalPrompt = `Please identify and erase the following from the image: ${prompt}. After erasing, fill the resulting empty area by seamlessly recreating the background textures, lighting, and details.`.trim();
       } else if (mode === 'pencil-sketch') {
-        finalPrompt = `Professional graphite pencil sketch of the subject in the image. Cross-hatching, fine line art, realistic lead textures, HB and 2B style shading.`.trim();
+        finalPrompt = `Professional graphite pencil sketch, cross-hatching, fine line art, realistic lead textures.`.trim();
       } else if (mode === 'watercolor') {
-        finalPrompt = `Professional watercolor painting based on this image. Wet-on-wet technique, vibrant washes, artistic heavy-grain paper texture.`.trim();
+        finalPrompt = `Professional watercolor painting, wet-on-wet technique, vibrant washes, heavy-grain paper texture.`.trim();
       } else if (mode === 'pexar') {
         finalPrompt = `Transform the scene into a ${STYLE_PROMPTS[ArtStyle.Pexar]}. Original context: ${prompt}`.trim();
       } else {
@@ -204,8 +215,9 @@ const App: React.FC = () => {
       );
       
       updateApiUsage(imageModel);
-
       setResultUrl(finalUrl);
+
+      // Salvare asincronă în DB locală (nu blochează fluxul UI)
       const newEntry: HistoryEntry = {
         id: Math.random().toString(36).substr(2, 9),
         url: finalUrl,
@@ -213,9 +225,14 @@ const App: React.FC = () => {
         timestamp: Date.now(),
         modelUsed: imageModel
       };
-      const updatedHistory = [newEntry, ...history].slice(0, 20);
-      setHistory(updatedHistory);
-      localStorage.setItem('nano-studio-history', JSON.stringify(updatedHistory));
+
+      try {
+        await saveHistoryEntry(newEntry);
+        const updatedHistory = [newEntry, ...history].slice(0, 50); // Mărim limita de istoric
+        setHistory(updatedHistory);
+      } catch (dbErr) {
+        console.error("Nu s-a putut salva în istoric:", dbErr);
+      }
 
     } catch (err: any) {
       const msg = err.message || t.errorGeneric;
@@ -223,11 +240,8 @@ const App: React.FC = () => {
 
       if (msg.includes("Requested entity was not found") || (err.status === 404)) {
         setHasApiKeySelected(false);
-        setError("Cheia API a expirat sau nu a fost găsită. Vă rugăm să o selectați din nou.");
-        // Conform ghidului, resetăm starea și cerem re-selecția
+        setError("Cheia API a expirat. Re-selectați-o din butonul Configurare.");
         window.aistudio?.openSelectKey();
-      } else if (msg.includes("503") || msg.includes("overloaded")) {
-        setError("Serverele sunt ocupate. Vă rugăm să reîncercați în câteva secunde.");
       } else {
         setError(msg);
       }
@@ -274,26 +288,13 @@ const App: React.FC = () => {
                 <button 
                   onClick={() => setIsAdminOpen(true)}
                   className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl transition-all border border-white/5"
-                  title="Admin Dashboard"
                 >
                   <LayoutDashboard size={20} />
                 </button>
               )}
-              
-              <button 
-                onClick={handleLogout}
-                className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-xl transition-all border border-white/5"
-                title="Sign Out"
-              >
-                <LogOut size={20} />
-              </button>
-
-              <button 
-                onClick={handleApiKeyFix} 
-                className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}
-              >
-                <Key size={14} />
-                <span className="hidden sm:inline">{t.apiKeyBtn}</span>
+              <button onClick={handleLogout} className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-xl transition-all border border-white/5"><LogOut size={20} /></button>
+              <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black animate-pulse' : 'bg-slate-800 border border-white/10'}`}>
+                <Key size={14} /><span className="hidden sm:inline">{t.apiKeyBtn}</span>
               </button>
             </div>
           </div>
@@ -316,11 +317,7 @@ const App: React.FC = () => {
             mode={mode} setMode={setMode}
           />
           
-          <button 
-            onClick={handleGenerate} 
-            disabled={isLoading} 
-            className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
-          >
+          <button onClick={handleGenerate} disabled={isLoading} className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}>
             {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
             {mode === 'generate' ? t.generateBtn : (mode === 'erase' ? t.eraseBtn : (mode === 'remove-bg' ? t.removeBgBtn : (mode === 'pencil-sketch' ? t.pencilBtn : (mode === 'watercolor' ? t.modeWatercolor : t.modePexar))))}
           </button>
@@ -338,7 +335,9 @@ const App: React.FC = () => {
             t={t} imageUrl={resultUrl} isLoading={isLoading} error={error} 
             aspectRatio={aspectRatio} 
             onUpdateImage={(url) => setResultUrl(url)} 
-            history={history} onSelectFromHistory={(item) => {setResultUrl(item.url); setMode('generate');}}
+            history={history} 
+            onSelectFromHistory={(item) => {setResultUrl(item.url); setMode('generate');}}
+            onClearHistory={handleClearHistory}
           />
         </div>
       </main>
@@ -351,15 +350,10 @@ const App: React.FC = () => {
 
       {isAdminOpen && (
         <AdminDashboard 
-          t={t} 
-          onClose={() => setIsAdminOpen(false)} 
+          t={t} onClose={() => setIsAdminOpen(false)} 
           users={users}
-          onUpdateUser={(userId, updates) => {
-            const newUsers = users.map(u => u.id === userId ? { ...u, ...updates } : u);
-            setUsers(newUsers);
-          }} 
-          apiUsage={apiUsage}
-          onResetApiUsage={() => setApiUsage(DEFAULT_API_USAGE)}
+          onUpdateUser={(userId, updates) => setUsers(users.map(u => u.id === userId ? { ...u, ...updates } : u))} 
+          apiUsage={apiUsage} onResetApiUsage={() => setApiUsage(DEFAULT_API_USAGE)}
         />
       )}
     </div>
