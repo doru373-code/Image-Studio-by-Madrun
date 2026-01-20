@@ -173,6 +173,18 @@ export const Controls: React.FC<ControlsProps> = ({
           <Droplets size={16} className="mr-2" />
           {t.modeWatercolor}
         </button>
+        <button
+          onClick={() => setMode('pexar')}
+          disabled={isGenerating}
+          className={`flex items-center justify-center py-3 px-2 rounded-xl border transition-all duration-300 text-xs font-bold col-span-2 ${
+            mode === 'pexar' 
+              ? 'bg-fuchsia-600 text-white border-fuchsia-500 shadow-lg shadow-fuchsia-600/20' 
+              : 'bg-slate-900 text-slate-400 border-white/5 hover:text-white hover:bg-slate-800'
+          }`}
+        >
+          <Sparkles size={16} className="mr-2" />
+          {t.modePexar}
+        </button>
       </div>
 
       {/* Engine Selection */}
@@ -218,8 +230,8 @@ export const Controls: React.FC<ControlsProps> = ({
         ) : (
           <div className="w-full">
              {renderImageUpload(1, referenceImage1Preview, 
-               mode === 'erase' ? t.uploadImageRequired : (mode === 'remove-bg' ? t.uploadRemoveBgRequired : (mode === 'pencil-sketch' ? t.uploadPencilHint : t.uploadWatercolorHint)),
-               mode === 'erase' ? t.uploadEraserHint : (mode === 'remove-bg' ? t.uploadRemoveBgHint : (mode === 'pencil-sketch' ? t.uploadPencilHint : t.uploadWatercolorHint))
+               mode === 'erase' ? t.uploadImageRequired : (mode === 'remove-bg' ? t.uploadRemoveBgRequired : (mode === 'pencil-sketch' ? t.uploadPencilHint : (mode === 'watercolor' ? t.uploadWatercolorHint : t.uploadPexarHint))),
+               mode === 'erase' ? t.uploadEraserHint : (mode === 'remove-bg' ? t.uploadRemoveBgHint : (mode === 'pencil-sketch' ? t.uploadPencilHint : (mode === 'watercolor' ? t.uploadWatercolorHint : t.uploadPexarHint)))
              )}
           </div>
         )}
@@ -239,16 +251,16 @@ export const Controls: React.FC<ControlsProps> = ({
           onChange={(e) => setPrompt(e.target.value)}
           disabled={isGenerating || mode === 'remove-bg'}
         />
-        {(mode === 'remove-bg' || mode === 'pencil-sketch' || mode === 'watercolor') && (
+        {(mode === 'remove-bg' || mode === 'pencil-sketch' || mode === 'watercolor' || mode === 'pexar') && (
            <p className="text-[10px] text-indigo-400/80 font-medium italic">
-             {mode === 'remove-bg' ? t.magicRemoveBgDesc : (mode === 'pencil-sketch' ? t.magicPencilDesc : t.magicWatercolorDesc)}
+             {mode === 'remove-bg' ? t.magicRemoveBgDesc : (mode === 'pencil-sketch' ? t.magicPencilDesc : (mode === 'watercolor' ? t.magicWatercolorDesc : t.magicPexarDesc))}
            </p>
         )}
       </div>
 
       {/* Style & Ratio Grid */}
       <div className="grid grid-cols-2 gap-6">
-        {(mode === 'generate' || mode === 'watercolor') && (
+        {(mode === 'generate' || mode === 'watercolor' || mode === 'pexar') && (
           <div className="space-y-3">
             <label htmlFor="style" className="block text-[10px] font-black text-slate-600 uppercase tracking-widest">
               {t.artStyle}
@@ -257,11 +269,13 @@ export const Controls: React.FC<ControlsProps> = ({
               id="style"
               value={style}
               onChange={(e) => setStyle(e.target.value as ArtStyle)}
-              disabled={isGenerating || mode === 'watercolor'}
+              disabled={isGenerating || mode === 'watercolor' || mode === 'pexar'}
               className="w-full bg-slate-900 border border-white/5 rounded-xl px-4 py-3 text-xs text-white focus:ring-2 focus:ring-indigo-500/50 outline-none cursor-pointer hover:bg-slate-800 transition-all disabled:opacity-50"
             >
               {mode === 'watercolor' ? (
                 <option value={ArtStyle.Watercolor}>{t.styles[ArtStyle.Watercolor]}</option>
+              ) : mode === 'pexar' ? (
+                <option value={ArtStyle.Pexar}>{t.styles[ArtStyle.Pexar]}</option>
               ) : (
                 Object.values(ArtStyle).map((s) => (
                   <option key={s} value={s}>

@@ -19,7 +19,7 @@ const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.Anime]: "modern high-quality anime style",
   [ArtStyle.PixelArt]: "retro 16-bit pixel art style",
   [ArtStyle.Minimalist]: "minimalist flat vector design",
-  [ArtStyle.Pexar]: "3D CGI character animation, Pixar-like style",
+  [ArtStyle.Pexar]: "Professional 3D character animation style, highly detailed 3D render, Pexar-inspired aesthetic, vibrant colors, soft studio lighting, cute character design, 8k resolution, cinematic composition",
   [ArtStyle.Cartoon]: "vibrant cartoon illustration, clean outlines"
 };
 
@@ -78,7 +78,13 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = useCallback(async () => {
-    if (!prompt.trim() && !refImage1 && mode !== 'remove-bg') {
+    // Validare: Avem nevoie de imagine sursă pentru Erase/Remove BG/Sketch/Watercolor/Pexar dacă nu e Generate pur
+    if (mode !== 'generate' && !refImage1) {
+      setError("Te rugăm să încarci o imagine sursă pentru a folosi această funcție.");
+      return;
+    }
+
+    if (!prompt.trim() && mode !== 'remove-bg' && mode !== 'pencil-sketch' && mode !== 'watercolor' && mode !== 'pexar') {
       setError(t.promptPlaceholder);
       return;
     }
@@ -91,12 +97,15 @@ const App: React.FC = () => {
       let finalPrompt = "";
       
       if (mode === 'remove-bg') {
-        finalPrompt = "Isolate the main subject and remove the background perfectly.";
+        finalPrompt = "Isolate the main subject and remove the background perfectly. Make it a clean studio cutout.";
+      } else if (mode === 'erase') {
+        finalPrompt = `Please identify and erase the following from the image: ${prompt}. After erasing, fill the resulting empty area by seamlessly recreating the background textures, lighting, and details to match the surroundings perfectly. No artifacts should be left behind.`.trim();
       } else if (mode === 'pencil-sketch') {
-        // AJUSTĂRI CREION: Adăugarea detaliilor tehnice pentru un aspect manual
-        finalPrompt = `Professional graphite pencil sketch of: ${prompt}. Use cross-hatching and fine line art. Artistic manual drawing style, detailed shading, HB and 2B pencil lead textures, realistic graphite on high-quality sketchpad paper. No colors, black and white only.`.trim();
+        finalPrompt = `Professional graphite pencil sketch of the subject in the image. Use cross-hatching and fine line art. Artistic manual drawing style, detailed shading, HB and 2B pencil lead textures, realistic graphite on high-quality sketchpad paper. No colors.`.trim();
       } else if (mode === 'watercolor') {
-        finalPrompt = `Professional watercolor painting of: ${prompt}. Wet-on-wet technique, vibrant color washes, artistic heavy-grain paper texture, high detail, artistic brushstrokes.`.trim();
+        finalPrompt = `Professional watercolor painting based on this image. Wet-on-wet technique, vibrant color washes, artistic heavy-grain paper texture, high detail, artistic brushstrokes.`.trim();
+      } else if (mode === 'pexar') {
+        finalPrompt = `Transform the scene into a ${STYLE_PROMPTS[ArtStyle.Pexar]}. Original context: ${prompt}`.trim();
       } else {
         finalPrompt = `${STYLE_PROMPTS[style]} ${prompt}`.trim();
       }
@@ -107,7 +116,7 @@ const App: React.FC = () => {
       const newEntry: HistoryEntry = {
         id: Math.random().toString(36).substr(2, 9),
         url: finalUrl,
-        prompt: prompt || (mode === 'watercolor' ? "Watercolor Art" : (mode === 'pencil-sketch' ? "Pencil Sketch" : "AI Creation")),
+        prompt: prompt || (mode === 'watercolor' ? "Watercolor Art" : (mode === 'pencil-sketch' ? "Pencil Sketch" : (mode === 'erase' ? "Object Erase" : (mode === 'pexar' ? "Pexar 3D" : "AI Creation")))),
         timestamp: Date.now()
       };
       const updatedHistory = [newEntry, ...history].slice(0, 20);
@@ -178,7 +187,7 @@ const App: React.FC = () => {
             className={`w-full py-5 rounded-3xl font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex items-center justify-center gap-3 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}
           >
             {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
-            {mode === 'generate' ? t.generateBtn : (mode === 'erase' ? t.eraseBtn : (mode === 'remove-bg' ? t.removeBgBtn : (mode === 'pencil-sketch' ? t.pencilBtn : t.modeWatercolor)))}
+            {mode === 'generate' ? t.generateBtn : (mode === 'erase' ? t.eraseBtn : (mode === 'remove-bg' ? t.removeBgBtn : (mode === 'pencil-sketch' ? t.pencilBtn : (mode === 'watercolor' ? t.modeWatercolor : t.modePexar))))}
           </button>
 
           {error && (

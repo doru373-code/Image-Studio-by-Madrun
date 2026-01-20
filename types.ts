@@ -31,7 +31,7 @@ export enum ImageModel {
 
 export type ImageResolution = "1K" | "2K" | "4K";
 
-export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor';
+export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor' | 'pexar';
 
 export type Language = 'en' | 'fr' | 'ro';
 
