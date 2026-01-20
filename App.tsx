@@ -1,12 +1,13 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { Palette, Key, Sparkles, RefreshCcw, AlertCircle, LayoutDashboard, LogOut } from 'lucide-react';
 import { generateImage } from './services/geminiService';
-import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry, ApiUsage } from './types';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry, ApiUsage, UserRecord } from './types';
 import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
-import { Login } from './components/Login';
+import { Login, PREDEFINED_PRO_ACCOUNTS } from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
+import { LandingPage } from './components/LandingPage';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
@@ -39,6 +40,7 @@ const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ro');
   const [mode, setMode] = useState<AppMode>('generate');
   const [userEmail, setUserEmail] = useState<string | null>(localStorage.getItem('studio-current-user'));
+  const [showLanding, setShowLanding] = useState(!localStorage.getItem('studio-current-user'));
   const [isAdminOpen, setIsAdminOpen] = useState(false);
   
   const [prompt, setPrompt] = useState('');
@@ -56,12 +58,40 @@ const App: React.FC = () => {
     return saved ? JSON.parse(saved) : DEFAULT_API_USAGE;
   });
   const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
+  const [users, setUsers] = useState<UserRecord[]>([]);
 
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
 
   const t = useMemo(() => translations[lang], [lang]);
 
   useEffect(() => {
+    const loadData = () => {
+      const saved = localStorage.getItem('nano-studio-history');
+      if (saved) setHistory(JSON.parse(saved));
+
+      // Reconstruct user list for admin dashboard
+      const localUsers = JSON.parse(localStorage.getItem('studio-local-users') || '[]');
+      const formattedUsers: UserRecord[] = [
+        { id: 'admin-super', email: 'doru373@gmail.com', role: 'admin', subscription: 'pro', joinDate: '2023-01-01' },
+        ...Object.keys(PREDEFINED_PRO_ACCOUNTS).map(email => ({
+          id: `pro-pre-${email}`,
+          email,
+          role: 'user' as const,
+          subscription: 'pro' as const,
+          joinDate: '2023-01-01'
+        })),
+        ...localUsers.map((u: any, i: number) => ({
+          id: `local-${i}`,
+          email: u.email,
+          role: 'user',
+          subscription: u.subscription || 'free',
+          joinDate: u.joinDate || new Date().toISOString().split('T')[0]
+        }))
+      ];
+      setUsers(formattedUsers);
+    };
+    loadData();
+
     const checkKey = async () => {
       if (window.aistudio) {
         try {
@@ -71,8 +101,6 @@ const App: React.FC = () => {
       }
     };
     checkKey();
-    const saved = localStorage.getItem('nano-studio-history');
-    if (saved) setHistory(JSON.parse(saved));
   }, []);
 
   useEffect(() => {
@@ -89,11 +117,13 @@ const App: React.FC = () => {
 
   const handleLogin = (email: string) => {
     setUserEmail(email);
+    setShowLanding(false);
     localStorage.setItem('studio-current-user', email);
   };
 
   const handleLogout = () => {
     setUserEmail(null);
+    setShowLanding(true);
     localStorage.removeItem('studio-current-user');
   };
 
@@ -120,6 +150,14 @@ const App: React.FC = () => {
   };
 
   const handleGenerate = useCallback(async () => {
+    if (imageModel === ImageModel.Pro && window.aistudio) {
+      const hasKey = await window.aistudio.hasSelectedApiKey();
+      if (!hasKey) {
+        await handleApiKeyFix();
+        // Assume key selection was successful after triggering openSelectKey
+      }
+    }
+
     if (mode !== 'generate' && !refImage1) {
       setError("Te rugăm să încarci o imagine sursă pentru a folosi această funcție.");
       return;
@@ -153,7 +191,6 @@ const App: React.FC = () => {
 
       finalUrl = await generateImage(finalPrompt, aspectRatio, resolution, imageModel, refImage1 ? { data: refImage1.data, mimeType: refImage1.mimeType } : undefined);
       
-      // Update billing tracking
       updateApiUsage(imageModel);
 
       setResultUrl(finalUrl);
@@ -172,6 +209,9 @@ const App: React.FC = () => {
       const msg = err.message || t.errorGeneric;
       if (msg.includes("503") || msg.includes("overloaded")) {
         setError("Serverul Gemini este momentan supraîncărcat. Am încercat de câteva ori, te rugăm să reîncerci peste un minut.");
+      } else if (msg.includes("Requested entity was not found")) {
+        setHasApiKeySelected(false);
+        setError("Requested entity was not found. Please select your API key again via the Configuration button.");
       } else {
         setError(msg);
       }
@@ -179,6 +219,10 @@ const App: React.FC = () => {
       setIsLoading(false);
     }
   }, [prompt, refImage1, style, aspectRatio, resolution, mode, imageModel, history, t]);
+
+  if (showLanding) {
+    return <LandingPage t={t} onProceed={() => setShowLanding(false)} onLangChange={(l) => setLang(l)} currentLang={lang} />;
+  }
 
   if (!userEmail) {
     return <Login t={t} onLogin={handleLogin} />;
@@ -290,8 +334,11 @@ const App: React.FC = () => {
         <AdminDashboard 
           t={t} 
           onClose={() => setIsAdminOpen(false)} 
-          users={[]} // În mod normal aici ar veni lista din localStorage
-          onUpdateUser={() => {}} 
+          users={users}
+          onUpdateUser={(userId, updates) => {
+            const newUsers = users.map(u => u.id === userId ? { ...u, ...updates } : u);
+            setUsers(newUsers);
+          }} 
           apiUsage={apiUsage}
           onResetApiUsage={() => setApiUsage(DEFAULT_API_USAGE)}
         />

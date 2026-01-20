@@ -50,16 +50,18 @@ export interface HistoryEntry {
   modelUsed: ImageModel;
 }
 
-export interface HistoryEntry {
-  id: string;
-  url: string;
-  prompt: string;
-  timestamp: number;
-}
-
 export interface GenerationResult {
   imageUrl: string | null;
   error: string | null;
+}
+
+export interface UserRecord {
+  id: string;
+  email: string;
+  subscription: 'free' | 'pro' | 'trial';
+  role: 'admin' | 'user';
+  password?: string;
+  joinDate: string;
 }
 
 declare global {
