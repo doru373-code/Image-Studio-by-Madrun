@@ -1,7 +1,7 @@
 
 import React from 'react';
-import { Upload, X, Image as ImageIcon, Eraser, Palette, Scissors, Pencil, Cpu, Sparkles, Droplets, Video } from 'lucide-react';
-import { AspectRatio, ArtStyle, ImageResolution, AppMode, ImageModel } from '../types';
+import { Upload, X, Image as ImageIcon, Eraser, Palette, Scissors, Pencil, Cpu, Sparkles, Droplets, Video, Book } from 'lucide-react';
+import { AspectRatio, ArtStyle, ImageResolution, AppMode, ImageModel, BookTheme } from '../types';
 import { translations } from '../translations';
 
 interface ControlsProps {
@@ -10,6 +10,8 @@ interface ControlsProps {
   setPrompt: (value: string) => void;
   style: ArtStyle;
   setStyle: (value: ArtStyle) => void;
+  bookTheme: BookTheme;
+  setBookTheme: (value: BookTheme) => void;
   aspectRatio: AspectRatio;
   setAspectRatio: (value: AspectRatio) => void;
   resolution: ImageResolution;
@@ -28,7 +30,7 @@ interface ControlsProps {
 }
 
 export const Controls: React.FC<ControlsProps> = ({
-  t, prompt, setPrompt, style, setStyle, aspectRatio, setAspectRatio, resolution, setResolution,
+  t, prompt, setPrompt, style, setStyle, bookTheme, setBookTheme, aspectRatio, setAspectRatio, resolution, setResolution,
   imageModel, setImageModel, isGenerating, referenceImage1Preview, referenceImage2Preview, referenceImage3Preview,
   onReferenceImageSelect, onClearReferenceImage, mode, setMode
 }) => {
@@ -63,6 +65,16 @@ export const Controls: React.FC<ControlsProps> = ({
         <button onClick={() => setMode('video-clone')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'video-clone' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Video size={14} className="mr-2" /> VIDEO CLONE</button>
       </div>
 
+      <div className="p-4 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl space-y-3">
+        <div className="flex items-center gap-2 text-indigo-400">
+          <Book size={16} />
+          <label className="text-[10px] font-black uppercase tracking-widest">Temă Ilustrație Carte</label>
+        </div>
+        <select value={bookTheme} onChange={(e) => setBookTheme(e.target.value as BookTheme)} className="w-full bg-slate-900 border border-white/5 rounded-xl px-3 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-indigo-500">
+          {Object.values(BookTheme).map(t => <option key={t} value={t}>{t}</option>)}
+        </select>
+      </div>
+
       <div className="grid grid-cols-2 gap-2">
         <button onClick={() => setMode('erase')} className={`flex items-center justify-center py-2 px-2 rounded-xl border transition-all text-[10px] font-bold ${mode === 'erase' ? 'bg-rose-600 text-white border-rose-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}><Eraser size={14} className="mr-1" /> {t.modeEraser}</button>
         <button onClick={() => setMode('remove-bg')} className={`flex items-center justify-center py-2 px-2 rounded-xl border transition-all text-[10px] font-bold ${mode === 'remove-bg' ? 'bg-emerald-600 text-white border-emerald-500' : 'bg-slate-900 text-slate-400 border-white/5'}`}><Scissors size={14} className="mr-1" /> {t.modeRemoveBg}</button>
@@ -70,19 +82,19 @@ export const Controls: React.FC<ControlsProps> = ({
 
       <div className="grid grid-cols-3 gap-2">
         <button onClick={() => setMode('pencil-sketch')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pencil-sketch' ? 'bg-slate-700 text-white border-slate-500' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Pencil size={14} className="mb-1" /> Sketch</button>
-        <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Watercolor</button>
-        <button onClick={() => setMode('pexar')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pexar' ? 'bg-purple-900/40 text-purple-300 border-purple-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Sparkles size={14} className="mb-1" /> Pexar 3D</button>
+        <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Water</button>
+        <button onClick={() => setMode('pexar')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pexar' ? 'bg-purple-900/40 text-purple-300 border-purple-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Sparkles size={14} className="mb-1" /> Pexar</button>
       </div>
 
       <div className="flex gap-2">
         {renderImageUpload(1, referenceImage1Preview, "Face REF", "Base")}
         {renderImageUpload(2, referenceImage2Preview, "Side REF", "Angle")}
-        {(mode === 'video-clone' || mode === 'generate' || mode === 'pencil-sketch' || mode === 'watercolor' || mode === 'pexar') && renderImageUpload(3, referenceImage3Preview || null, "Body REF", "Context")}
+        {renderImageUpload(3, referenceImage3Preview || null, "Body REF", "Context")}
       </div>
 
       <div className="space-y-3">
-        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">{mode === 'video-clone' ? "Descrie Acțiunea Video" : t.describeImagination}</label>
-        <textarea rows={3} className="w-full bg-slate-900 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none shadow-inner" placeholder={mode === 'video-clone' ? "Ex: Personajul merge pe o plajă exotică la apus..." : t.promptPlaceholderGen} value={prompt} onChange={(e) => setPrompt(e.target.value)} disabled={isGenerating} />
+        <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest">{t.describeImagination}</label>
+        <textarea rows={3} className="w-full bg-slate-900 border border-white/5 rounded-2xl p-4 text-sm text-white outline-none focus:ring-2 focus:ring-indigo-500/50 transition-all resize-none shadow-inner" placeholder={t.promptPlaceholderGen} value={prompt} onChange={(e) => setPrompt(e.target.value)} disabled={isGenerating} />
       </div>
 
       {mode !== 'video-clone' && (

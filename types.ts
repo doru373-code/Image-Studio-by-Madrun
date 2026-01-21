@@ -25,6 +25,15 @@ export enum ArtStyle {
   Cartoon = "Cartoon"
 }
 
+export enum BookTheme {
+  None = "Standard",
+  Fairytale = "Enchanted Fairytale",
+  Vintage = "Old Manuscript",
+  Modern = "Minimalist Modern",
+  Space = "Galactic Odyssey",
+  Dark = "Gothic Mystery"
+}
+
 export enum ImageModel {
   Flash = "gemini-2.5-flash-image",
   Pro = "gemini-3-pro-image-preview",
@@ -39,6 +48,8 @@ export type Language = 'en' | 'fr' | 'ro';
 
 export interface ApiUsage {
   totalRequests: number;
+  successCount: number;
+  failureCount: number;
   flashRequests: number;
   proRequests: number;
   estimatedCost: number; // in USD
@@ -51,11 +62,7 @@ export interface HistoryEntry {
   timestamp: number;
   modelUsed: ImageModel;
   type?: 'image' | 'video';
-}
-
-export interface GenerationResult {
-  imageUrl: string | null;
-  error: string | null;
+  theme?: BookTheme;
 }
 
 export interface UserRecord {

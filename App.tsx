@@ -1,15 +1,16 @@
 
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { Palette, Key, Sparkles, RefreshCcw, AlertCircle, LayoutDashboard, LogOut, Video } from 'lucide-react';
+import { Palette, Key, Sparkles, RefreshCcw, AlertCircle, LayoutDashboard, LogOut, Video, BarChart2 } from 'lucide-react';
 import { generateImage, generateVideo } from './services/geminiService';
-import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry, ApiUsage, UserRecord } from './types';
+import { AspectRatio, ArtStyle, Language, AppMode, ImageResolution, ImageModel, HistoryEntry, ApiUsage, UserRecord, BookTheme } from './types';
 import { translations } from './translations';
 import { Controls } from './components/Controls';
 import { ImageDisplay } from './components/ImageDisplay';
 import { Login, PREDEFINED_PRO_ACCOUNTS } from './components/Login';
 import { AdminDashboard } from './components/AdminDashboard';
 import { LandingPage } from './components/LandingPage';
-import { getAllHistory, saveHistoryEntry, clearAllHistory } from './services/historyDb';
+import { getAllHistory, saveHistoryEntry, clearAllHistory, deleteHistoryEntry } from './services/historyDb';
+import { getUsageStats, recordUsage, resetUsageStats } from './services/usageService';
 
 const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.None]: "",
@@ -28,15 +29,16 @@ const STYLE_PROMPTS: Record<ArtStyle, string> = {
   [ArtStyle.Cartoon]: "vibrant cartoon illustration, clean outlines"
 };
 
-const DEFAULT_API_USAGE: ApiUsage = {
-  totalRequests: 0,
-  flashRequests: 0,
-  proRequests: 0,
-  estimatedCost: 0
+const THEME_MODIFIERS: Record<BookTheme, string> = {
+  [BookTheme.None]: "",
+  [BookTheme.Fairytale]: "classic fairytale illustration style, golden ornaments, magical atmosphere, vibrant soft lighting",
+  [BookTheme.Vintage]: "antique manuscript style, aged parchment texture, sepia tones, classic ink drawing elements",
+  [BookTheme.Modern]: "modern clean minimalist editorial style, high-end photography, solid backgrounds, geometric balance",
+  [BookTheme.Space]: "galactic sci-fi aesthetic, neon highlights, deep cosmic colors, futuristic textures",
+  [BookTheme.Dark]: "gothic mystery style, dramatic shadows, moody lighting, intricate dark ornaments"
 };
 
-const FLASH_COST_PER_IMG = 0.0001;
-const PRO_COST_PER_IMG = 0.005;
+const MAX_HISTORY_ITEMS = 40;
 
 const App: React.FC = () => {
   const [lang, setLang] = useState<Language>('ro');
@@ -47,6 +49,7 @@ const App: React.FC = () => {
   
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
+  const [bookTheme, setBookTheme] = useState<BookTheme>(BookTheme.None);
   const [aspectRatio, setAspectRatio] = useState<AspectRatio>(AspectRatio.Ratio1_1);
   const [resolution, setResolution] = useState<ImageResolution>("1K");
   const [imageModel, setImageModel] = useState<ImageModel>(ImageModel.Flash);
@@ -56,13 +59,8 @@ const App: React.FC = () => {
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const [apiUsage, setApiUsage] = useState<ApiUsage>(() => {
-    const saved = localStorage.getItem('studio-api-usage');
-    return saved ? JSON.parse(saved) : DEFAULT_API_USAGE;
-  });
-  const [hasApiKeySelected, setHasApiKeySelected] = useState<boolean>(true);
-  const [users, setUsers] = useState<UserRecord[]>([]);
-
+  const [apiUsage, setApiUsage] = useState<ApiUsage>(getUsageStats());
+  
   const [refImage1, setRefImage1] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
   const [refImage2, setRefImage2] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
   const [refImage3, setRefImage3] = useState<{ data: string; mimeType: string; preview: string } | null>(null);
@@ -71,63 +69,16 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const loadData = async () => {
-      localStorage.removeItem('nano-studio-history'); 
       const savedHistory = await getAllHistory();
-      setHistory(savedHistory);
-
-      const localUsers = JSON.parse(localStorage.getItem('studio-local-users') || '[]');
-      const formattedUsers: UserRecord[] = [
-        { id: 'admin-super', email: 'doru373@gmail.com', role: 'admin', subscription: 'pro', joinDate: '2023-01-01' },
-        ...Object.keys(PREDEFINED_PRO_ACCOUNTS).map(email => ({
-          id: `pro-pre-${email}`,
-          email,
-          role: 'user' as const,
-          subscription: 'pro' as const,
-          joinDate: '2023-01-01'
-        })),
-        ...localUsers.map((u: any, i: number) => ({
-          id: `local-${i}`,
-          email: u.email,
-          role: 'user',
-          subscription: u.subscription || 'free',
-          joinDate: u.joinDate || new Date().toISOString().split('T')[0]
-        }))
-      ];
-      setUsers(formattedUsers);
+      setHistory(savedHistory.slice(0, MAX_HISTORY_ITEMS));
     };
     loadData();
-
-    const checkKey = async () => {
-      if (window.aistudio) {
-        try {
-          const selected = await window.aistudio.hasSelectedApiKey();
-          setHasApiKeySelected(selected);
-        } catch (e) {
-          setHasApiKeySelected(false);
-        }
-      }
-    };
-    checkKey();
   }, []);
 
   const handleApiKeyFix = async () => {
     if (window.aistudio) {
       await window.aistudio.openSelectKey();
-      setHasApiKeySelected(true);
-      setError(null);
     }
-  };
-
-  const handleLogin = (email: string) => {
-    setUserEmail(email);
-    setShowLanding(false);
-    localStorage.setItem('studio-current-user', email);
-  };
-
-  const handleLogout = () => {
-    setUserEmail(null);
-    setShowLanding(true);
-    localStorage.removeItem('studio-current-user');
   };
 
   const onReferenceImageSelect = (file: File, slot: 1 | 2 | 3) => {
@@ -145,17 +96,12 @@ const App: React.FC = () => {
     reader.readAsDataURL(file);
   };
 
-  const handleGenerate = useCallback(async () => {
-    if (window.aistudio) {
-      const hasKey = await window.aistudio.hasSelectedApiKey();
-      if (!hasKey) {
-        setHasApiKeySelected(false);
-        setError("Vă rugăm să selectați o cheie API.");
-        await handleApiKeyFix();
-        return;
-      }
-    }
+  const handleDeleteHistoryItem = useCallback(async (id: string) => {
+    await deleteHistoryEntry(id);
+    setHistory(prev => prev.filter(item => item.id !== id));
+  }, []);
 
+  const handleGenerate = useCallback(async () => {
     if (!prompt.trim() && (mode === 'generate' || mode === 'video-clone')) {
       setError(t.promptPlaceholder);
       return;
@@ -163,7 +109,7 @@ const App: React.FC = () => {
 
     setIsLoading(true);
     setError(null);
-    setVideoStatus(mode === 'video-clone' ? "Inițiere clonare video..." : null);
+    const currentModel = mode === 'video-clone' ? ImageModel.Veo : imageModel;
 
     try {
       let finalUrl = "";
@@ -176,19 +122,18 @@ const App: React.FC = () => {
         finalUrl = await generateVideo(prompt, references, (status) => setVideoStatus(status));
       } else {
         let finalPrompt = "";
+        const themeMod = THEME_MODIFIERS[bookTheme];
         
         if (mode === 'remove-bg') {
-          finalPrompt = "Clean background removal, focus only on the main subject.";
-        } else if (mode === 'erase') {
-          finalPrompt = `Erase and fill: ${prompt}. Blend perfectly with surroundings.`;
+          finalPrompt = "Clean background removal.";
         } else if (mode === 'pencil-sketch') {
-          finalPrompt = `STRICT CHARACTER PENCIL SKETCH: Transform the subject into a professional graphite pencil drawing. Use cross-hatching, fine line art, and realistic lead textures. Preserve identity perfectly. ${prompt}`;
+          finalPrompt = `STRICT CHARACTER PENCIL SKETCH: graphite drawing. ${themeMod} ${prompt}`;
         } else if (mode === 'watercolor') {
-          finalPrompt = `STRICT CHARACTER WATERCOLOR: Transform the subject into a vibrant watercolor painting on textured paper. Preserve identity. ${prompt}`;
+          finalPrompt = `STRICT CHARACTER WATERCOLOR: ${themeMod} ${prompt}`;
         } else if (mode === 'pexar') {
-          finalPrompt = `STRICT CHARACTER PEXAR 3D: Transform the subject into a high-end 3D animated character style. Preserve identity. ${prompt}`;
+          finalPrompt = `STRICT CHARACTER PEXAR 3D: ${themeMod} ${prompt}`;
         } else {
-          finalPrompt = `${STYLE_PROMPTS[style]} ${prompt}`.trim();
+          finalPrompt = `${themeMod} ${STYLE_PROMPTS[style]} ${prompt}`.trim();
         }
           
         finalUrl = await generateImage(
@@ -203,25 +148,45 @@ const App: React.FC = () => {
         url: finalUrl,
         prompt: prompt || mode,
         timestamp: Date.now(),
-        modelUsed: mode === 'video-clone' ? ImageModel.Veo : imageModel,
-        type: mode === 'video-clone' ? 'video' : 'image'
+        modelUsed: currentModel,
+        type: mode === 'video-clone' ? 'video' : 'image',
+        theme: bookTheme
       };
 
       await saveHistoryEntry(newEntry);
-      setHistory(prev => [newEntry, ...prev].slice(0, 50));
+      setHistory(prev => [newEntry, ...prev].slice(0, MAX_HISTORY_ITEMS));
+      setApiUsage(recordUsage(currentModel, true));
 
     } catch (err: any) {
       setError(err.message || t.errorGeneric);
+      setApiUsage(recordUsage(currentModel, false));
+      
+      const failedEntry: HistoryEntry = {
+        id: Math.random().toString(36).substr(2, 9),
+        url: 'FAILED',
+        prompt: prompt || mode,
+        timestamp: Date.now(),
+        modelUsed: currentModel,
+        type: mode === 'video-clone' ? 'video' : 'image',
+        theme: bookTheme
+      };
+      await saveHistoryEntry(failedEntry);
+      setHistory(prev => [failedEntry, ...prev].slice(0, MAX_HISTORY_ITEMS));
+
     } finally {
       setIsLoading(false);
       setVideoStatus(null);
     }
-  }, [prompt, refImage1, refImage2, refImage3, style, aspectRatio, resolution, mode, imageModel, t]);
+  }, [prompt, refImage1, refImage2, refImage3, style, bookTheme, aspectRatio, resolution, mode, imageModel, t]);
 
-  if (showLanding) return <LandingPage t={t} onProceed={() => setShowLanding(false)} onLangChange={setLang} currentLang={lang} />;
-  if (!userEmail) return <Login t={t} onLogin={handleLogin} />;
+  const handleResetUsage = () => {
+    setApiUsage(resetUsageStats());
+  };
 
   const isAdmin = userEmail === 'doru373@gmail.com';
+
+  if (showLanding) return <LandingPage t={t} onProceed={() => setShowLanding(false)} onLangChange={setLang} currentLang={lang} />;
+  if (!userEmail) return <Login t={t} onLogin={(email) => { setUserEmail(email); setShowLanding(false); localStorage.setItem('studio-current-user', email); }} />;
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -231,15 +196,18 @@ const App: React.FC = () => {
             <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-indigo-500/30">
               <Palette size={26} className="text-white" />
             </div>
-            <div>
-              <h1 className="text-xl font-black tracking-tighter leading-none uppercase">{t.appTitle}</h1>
-              <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-1 block tracking-[0.2em]">Workspace Activ</span>
-            </div>
+            <h1 className="text-xl font-black tracking-tighter uppercase">{t.appTitle}</h1>
           </div>
           <div className="flex items-center gap-3">
-            {isAdmin && <button onClick={() => setIsAdminOpen(true)} className="p-3 bg-slate-800 hover:bg-slate-700 text-amber-400 rounded-xl border border-white/5"><LayoutDashboard size={20} /></button>}
-            <button onClick={handleLogout} className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-xl border border-white/5"><LogOut size={20} /></button>
-            <button onClick={handleApiKeyFix} className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all ${!hasApiKeySelected ? 'bg-amber-500 text-black' : 'bg-slate-800 border border-white/10'}`}><Key size={14} /><span className="hidden sm:inline">{t.apiKeyBtn}</span></button>
+             <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-xl border border-white/5">
+                <BarChart2 size={14} className="text-emerald-400" />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Usage: {apiUsage.successCount}/{apiUsage.totalRequests}</span>
+             </div>
+             {isAdmin && (
+               <button onClick={() => setIsAdminOpen(true)} className="p-3 bg-indigo-600/10 hover:bg-indigo-600 text-indigo-400 hover:text-white rounded-xl transition-all border border-indigo-500/20"><LayoutDashboard size={20} /></button>
+             )}
+             <button onClick={() => { setUserEmail(null); setShowLanding(true); localStorage.removeItem('studio-current-user'); }} className="p-3 bg-slate-800 hover:bg-red-500/10 text-slate-400 hover:text-red-400 rounded-xl border border-white/5"><LogOut size={20} /></button>
+             <button onClick={handleApiKeyFix} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-slate-800 border border-white/10"><Key size={14} /><span className="hidden sm:inline">{t.apiKeyBtn}</span></button>
           </div>
         </div>
       </nav>
@@ -249,6 +217,7 @@ const App: React.FC = () => {
           <Controls 
             t={t} prompt={prompt} setPrompt={setPrompt} 
             style={style} setStyle={setStyle} 
+            bookTheme={bookTheme} setBookTheme={setBookTheme}
             aspectRatio={aspectRatio} setAspectRatio={setAspectRatio} 
             resolution={resolution} setResolution={setResolution} 
             imageModel={imageModel} setImageModel={setImageModel} 
@@ -262,8 +231,8 @@ const App: React.FC = () => {
           />
           <button onClick={handleGenerate} disabled={isLoading} className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex flex-col items-center justify-center gap-1 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}>
             <div className="flex items-center gap-3">
-              {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : (mode === 'video-clone' ? <Video size={20} /> : <Sparkles size={20} />)}
-              {mode === 'video-clone' ? 'Generează Video Character' : t.generateBtn}
+              {isLoading ? <RefreshCcw className="animate-spin" size={20} /> : <Sparkles size={20} />}
+              {t.generateBtn}
             </div>
             {videoStatus && <span className="text-[10px] opacity-70 animate-pulse">{videoStatus}</span>}
           </button>
@@ -274,12 +243,24 @@ const App: React.FC = () => {
           <ImageDisplay 
             t={t} imageUrl={resultUrl} isLoading={isLoading} error={error} 
             aspectRatio={aspectRatio} onUpdateImage={setResultUrl} 
-            history={history} onSelectFromHistory={(item) => {setResultUrl(item.url); setMode(item.type === 'video' ? 'video-clone' : 'generate');}}
+            history={history} onSelectFromHistory={(item) => { if (item.url !== 'FAILED') { setResultUrl(item.url); setMode(item.type === 'video' ? 'video-clone' : 'generate'); if(item.theme) setBookTheme(item.theme); } }}
             onClearHistory={() => {clearAllHistory(); setHistory([]);}}
-            mode={mode}
+            onDeleteHistoryItem={handleDeleteHistoryItem}
+            mode={mode} bookTheme={bookTheme}
           />
         </div>
       </main>
+
+      {isAdminOpen && (
+        <AdminDashboard 
+          t={t} 
+          onClose={() => setIsAdminOpen(false)} 
+          users={[]} // Logic for fetching users would go here
+          onUpdateUser={() => {}} 
+          apiUsage={apiUsage} 
+          onResetApiUsage={handleResetUsage} 
+        />
+      )}
     </div>
   );
 };
