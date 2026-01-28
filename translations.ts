@@ -1,3 +1,4 @@
+
 import { ArtStyle } from './types';
 
 export const translations = {
@@ -76,7 +77,7 @@ export const translations = {
     magicEraserActive: "Magic Eraser Active",
     magicEraserDesc: "Describe what to remove or change in the source image above.",
     magicRemoveBgActive: "Background Remover Active",
-    magicRemoveBgDesc: "Isolate the main subject and clean the background.",
+    magicRemoveBgDesc: "Isolate the main subject and completely strip the background color.",
     magicPencilActive: "Artistic Pencil Mode Active",
     magicPencilDesc: "Transforming your vision into a graphite masterpiece with cross-hatching and realistic shading.",
     magicWatercolorActive: "Watercolor Mode Active",
@@ -214,7 +215,7 @@ export const translations = {
     magicEraserActive: "Guma Magică Activă",
     magicEraserDesc: "Descrie ce dorești să elimini sau să schimbi în imaginea de mai sus.",
     magicRemoveBgActive: "Background Remover Activ",
-    magicRemoveBgDesc: "Izolează subiectul principal și curăță fundalul.",
+    magicRemoveBgDesc: "Izolează subiectul principal și elimină complet culoarea de fundal pentru o izolare perfectă.",
     magicPencilActive: "Mod Desen în Grafit Activ",
     magicPencilDesc: "Transformăm viziunea ta într-o capodoperă în creion, cu hașură profesională și umbre realiste.",
     magicWatercolorActive: "Mod Aquarelă Activ",
@@ -352,7 +353,7 @@ export const translations = {
     magicEraserActive: "Gomme Active",
     magicEraserDesc: "Décrivez l'objet à supprimer.",
     magicRemoveBgActive: "Effaceur Fond Actif",
-    magicRemoveBgDesc: "Isolez le sujet.",
+    magicRemoveBgDesc: "Isolez le sujet et supprimez complètement la couleur d'arrière-plan.",
     magicPencilActive: "Mode Crayon Artistique Actif",
     magicPencilDesc: "Transformation de votre vision en chef-d'œuvre au graphite avec hachures et ombrages réalistes.",
     magicWatercolorActive: "Mode Aquarelle Actif",
@@ -384,7 +385,7 @@ export const translations = {
     sepia: "Sépia",
     invert: "Inverser",
     adminDashboard: "Tableau de Bord Admin",
-    totalUsers: "Utilisateurs Totaux",
+    totalUsers: "Utilizatorii Totali",
     activeSubscribers: "Abonnés Actifs",
     manageUsers: "Gérer les Utilisateurs",
     userEmail: "Email Utilisateur",

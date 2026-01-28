@@ -125,13 +125,15 @@ const App: React.FC = () => {
         const themeMod = THEME_MODIFIERS[bookTheme];
         
         if (mode === 'remove-bg') {
-          finalPrompt = "Clean background removal.";
+          finalPrompt = "BACKGROUND REMOVAL: Isolate the main subject from the provided image and place it on a SOLID, PURE WHITE flat background. Zero shadows, zero background elements, high contrast border.";
         } else if (mode === 'pencil-sketch') {
           finalPrompt = `STRICT CHARACTER PENCIL SKETCH: graphite drawing. ${themeMod} ${prompt}`;
         } else if (mode === 'watercolor') {
           finalPrompt = `STRICT CHARACTER WATERCOLOR: ${themeMod} ${prompt}`;
         } else if (mode === 'pexar') {
           finalPrompt = `STRICT CHARACTER PEXAR 3D: ${themeMod} ${prompt}`;
+        } else if (mode === 'erase') {
+          finalPrompt = `STRICT OBJECT REMOVAL/EDIT: Modify the image to remove or change objects as described: ${prompt}`;
         } else {
           finalPrompt = `${themeMod} ${STYLE_PROMPTS[style]} ${prompt}`.trim();
         }
