@@ -1,6 +1,6 @@
 
 import React, { useRef, useState, useEffect } from 'react';
-import { Download, Maximize2, X, FileText, Loader2, Sparkles, History, Image as ImageIcon, FolderOpen, CheckCircle2, Trash2, Video, Type, AlertTriangle } from 'lucide-react';
+import { Download, Maximize2, X, FileText, Loader2, Sparkles, History, Image as ImageIcon, FolderOpen, CheckCircle2, Trash2, Video, Type, AlertTriangle, Wand2 } from 'lucide-react';
 import { translations } from '../translations';
 import { jsPDF } from 'jspdf';
 import { AspectRatio, HistoryEntry, AppMode, BookTheme } from '../types';
@@ -26,6 +26,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
 }) => {
   const [isFullSizeOpen, setIsFullSizeOpen] = useState(false);
   const [isPdfGenerating, setIsPdfGenerating] = useState(false);
+  const [isProcessingTransparency, setIsProcessingTransparency] = useState(false);
   const [caption, setCaption] = useState('');
   const [dirHandle, setDirHandle] = useState<FileSystemDirectoryHandle | null>(null);
   const [isSyncActive, setIsSyncActive] = useState(false);
@@ -54,6 +55,59 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
+    }
+  };
+
+  const applyTransparency = async () => {
+    if (!imageUrl || isVideo || imageUrl === 'FAILED') return;
+    setIsProcessingTransparency(true);
+    
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageUrl;
+      await new Promise((resolve) => (img.onload = resolve));
+
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width;
+      canvas.height = img.height;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
+
+      ctx.drawImage(img, 0, 0);
+      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+      const data = imageData.data;
+
+      // Detect background color from top-left pixel
+      const bgR = data[0];
+      const bgG = data[1];
+      const bgB = data[2];
+
+      // Threshold for removing background (pure white or detected color)
+      const threshold = 40; 
+
+      for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i+1];
+        const b = data[i+2];
+
+        // Match against pure white (common for AI backgrounds) OR detected corner color
+        const isWhite = r > 240 && g > 240 && b > 240;
+        const diff = Math.abs(r - bgR) + Math.abs(g - bgG) + Math.abs(b - bgB);
+        const isBgColor = diff < threshold;
+
+        if (isWhite || isBgColor) {
+          data[i+3] = 0; // Set Alpha to 0
+        }
+      }
+
+      ctx.putImageData(imageData, 0, 0);
+      const transparentUrl = canvas.toDataURL("image/png");
+      onUpdateImage?.(transparentUrl);
+    } catch (err) {
+      console.error("Transparency processing failed", err);
+    } finally {
+      setIsProcessingTransparency(false);
     }
   };
 
@@ -150,13 +204,15 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </div>
         )}
 
-        {isLoading ? (
+        {isLoading || isProcessingTransparency ? (
           <div className="flex flex-col items-center justify-center p-8 text-center">
             <div className="relative w-20 h-20 mb-8">
               <div className="absolute inset-0 border-4 border-slate-800 rounded-full"></div>
               <div className="absolute inset-0 border-4 border-indigo-500 rounded-full animate-spin border-t-transparent shadow-[0_0_30px_rgba(79,70,229,0.2)]"></div>
             </div>
-            <p className="text-xl font-black text-indigo-400 animate-pulse uppercase tracking-widest">{isVideo ? "Generare Video..." : t.dreamingImage}</p>
+            <p className="text-xl font-black text-indigo-400 animate-pulse uppercase tracking-widest">
+              {isProcessingTransparency ? "Eliminare Fundal..." : isVideo ? "Generare Video..." : t.dreamingImage}
+            </p>
           </div>
         ) : imageUrl && imageUrl !== 'FAILED' ? (
           <>
@@ -173,6 +229,7 @@ export const ImageDisplay: React.FC<ImageDisplayProps> = ({
               
               {!isVideo && (
                 <>
+                  <button onClick={applyTransparency} className="p-3 text-amber-400 hover:bg-amber-400/10 rounded-2xl transition-all flex flex-col items-center gap-1" title={t.makeTransparent}><Wand2 size={22} /><span className="text-[8px] font-black uppercase tracking-widest opacity-60">ALPHA</span></button>
                   <button onClick={handleDownloadPdf} disabled={isPdfGenerating} className="p-3 text-indigo-400 hover:bg-indigo-400/10 rounded-2xl transition-all flex flex-col items-center gap-1" title="Export PDF (8.5x8.5)"><FileText size={22} /><span className="text-[8px] font-black uppercase tracking-widest opacity-60">BOOK PDF</span></button>
                 </>
               )}
