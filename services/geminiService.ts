@@ -33,6 +33,7 @@ export const generateVideo = async (
   const apiKey = process.env.API_KEY;
   if (!apiKey) throw new Error("API Key not configured.");
   
+  // Re-create instance right before calling as per guidelines
   const ai = new GoogleGenAI({ apiKey });
   
   const referenceImagesPayload: any[] = referenceImages.map(img => ({
@@ -45,27 +46,30 @@ export const generateVideo = async (
 
   onStatusUpdate?.("Inițializare operațiune video...");
   
-  let operation = await ai.models.generateVideos({
-    model: 'veo-3.1-generate-preview',
-    prompt: prompt,
-    config: {
-      numberOfVideos: 1,
-      referenceImages: referenceImagesPayload,
-      resolution: '720p',
-      aspectRatio: '16:9'
-    }
+  // Wrapped in withRetry and correctly passing referenceImages to config
+  let operation = await withRetry(async () => {
+    return await ai.models.generateVideos({
+      model: 'veo-3.1-generate-preview',
+      prompt: prompt,
+      config: {
+        numberOfVideos: 1,
+        resolution: '720p',
+        aspectRatio: '16:9',
+        referenceImages: referenceImagesPayload.length > 0 ? referenceImagesPayload : undefined
+      }
+    });
   });
 
   while (!operation.done) {
-    onStatusUpdate?.("AI-ul generează cadrele video... (proces de durată)");
+    onStatusUpdate?.("AI-ul generează cadrele video...");
     await wait(10000);
+    // Poll operation status correctly
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
 
   const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-  if (!downloadLink) throw new Error("Eroare la obținerea link-ului de descărcare video.");
+  if (!downloadLink) throw new Error("Eroare la obținerea link-ului video.");
 
-  onStatusUpdate?.("Descărcare clip video final...");
   const fetchResponse = await fetch(`${downloadLink}&key=${apiKey}`);
   const blob = await fetchResponse.blob();
   return URL.createObjectURL(blob);
@@ -80,14 +84,14 @@ export const generateImage = async (
 ): Promise<string> => {
   const apiKey = process.env.API_KEY;
   if (!apiKey) {
-    throw new Error("Cheia API nu este configurată. Te rugăm să folosești butonul Configurare API.");
+    throw new Error("Cheia API nu este configurată.");
   }
   
+  // Create instance right before call
   const ai = new GoogleGenAI({ apiKey });
-  
   const parts: any[] = [];
   
-  let enhancedPrompt = prompt;
+  // Nano banana series: use parts for image references
   if (referenceImages.length > 0) {
     referenceImages.forEach((img) => {
       parts.push({
@@ -97,11 +101,9 @@ export const generateImage = async (
         },
       });
     });
-    
-    enhancedPrompt = `STRICT CHARACTER CONSISTENCY: Using the visual identity, facial features, hair style, and body proportions of the subjects in the provided images, create a new scene. The subject must remain exactly the same person. Action/Setting: ${prompt}`;
   }
 
-  parts.push({ text: enhancedPrompt });
+  parts.push({ text: prompt });
 
   let apiRatio: string = "1:1";
   switch (aspectRatio) {
@@ -134,15 +136,15 @@ export const generateImage = async (
     });
 
     if (!response || !response.candidates || response.candidates.length === 0) {
-      throw new Error("Nu am primit un răspuns de la AI. Încearcă un prompt diferit.");
+      throw new Error("Nu am primit un răspuns de la AI.");
     }
 
     const candidate = response.candidates[0];
-    
     if (candidate.finishReason === 'SAFETY') {
-      throw new Error("Imaginea nu a putut fi generată din cauza filtrelor de siguranță.");
+      throw new Error("Conținut blocat de filtrele de siguranță.");
     }
 
+    // Nano banana models: iterate parts to find inlineData
     for (const part of candidate.content.parts) {
       if (part.inlineData && part.inlineData.data) {
         const mimeType = part.inlineData.mimeType || 'image/png';
@@ -150,6 +152,6 @@ export const generateImage = async (
       }
     }
 
-    throw new Error("Răspunsul nu conține date vizuale. Verifică prompt-ul.");
+    throw new Error("Imaginea nu a fost returnată corespunzător.");
   });
 };
