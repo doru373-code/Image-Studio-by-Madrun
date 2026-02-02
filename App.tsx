@@ -12,7 +12,7 @@ import { getUsageStats, recordUsage, resetUsageStats } from './services/usageSer
 const MAX_HISTORY_ITEMS = 40;
 
 const App: React.FC = () => {
-  const [lang, setLang] = useState<Language>('ro');
+  const [lang, setLang] = useState<Language>('en');
   const [mode, setMode] = useState<AppMode>('generate');
   const [prompt, setPrompt] = useState('');
   const [style, setStyle] = useState<ArtStyle>(ArtStyle.None);
@@ -21,6 +21,11 @@ const App: React.FC = () => {
   const [resolution, setResolution] = useState<ImageResolution>("1K");
   const [imageModel, setImageModel] = useState<ImageModel>(ImageModel.Flash);
   
+  // Pencil Sketch Parameters
+  const [lineThickness, setLineThickness] = useState(5); // 1-10
+  const [shadingIntensity, setShadingIntensity] = useState(5); // 1-10
+  const [paperTexture, setPaperTexture] = useState('Grained'); // 'Smooth', 'Grained', 'Rough'
+
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [videoStatus, setVideoStatus] = useState<string | null>(null);
@@ -77,11 +82,9 @@ const App: React.FC = () => {
 
     const currentModel = mode === 'video-clone' ? ImageModel.Veo : imageModel;
 
-    // MANDATORY: Check if API key is selected for Veo or Pro models before generation
     if (window.aistudio && (currentModel === ImageModel.Veo || currentModel === ImageModel.Pro)) {
       if (!(await window.aistudio.hasSelectedApiKey())) {
         await window.aistudio.openSelectKey();
-        // Race condition: trigger and proceed as per guidelines
       }
     }
 
@@ -98,9 +101,25 @@ const App: React.FC = () => {
       if (mode === 'video-clone') {
         finalUrl = await generateVideo(prompt, references, (status) => setVideoStatus(status));
       } else {
-        // Nano banana models execution
+        // Construct prompt based on mode and theme
+        let basePrompt = prompt;
+        if (bookTheme !== BookTheme.None) {
+          basePrompt = `${basePrompt}. Style: ${bookTheme} book illustration.`;
+        }
+        
+        let effectivePrompt = basePrompt;
+        if (mode === 'pencil-sketch') {
+          const thickDesc = lineThickness > 7 ? 'bold and thick lines' : lineThickness < 4 ? 'fine and delicate lines' : 'medium weight lines';
+          const shadeDesc = shadingIntensity > 7 ? 'heavy and dramatic shading' : shadingIntensity < 4 ? 'light and soft shading' : 'balanced realistic shading';
+          effectivePrompt = `A high-quality graphite pencil sketch of ${basePrompt}. Features ${thickDesc}, ${shadeDesc}, and is drawn on ${paperTexture.toLowerCase()} paper texture. Professional hand-drawn look, detailed cross-hatching.`;
+        } else if (mode === 'watercolor') {
+          effectivePrompt = `A beautiful vibrant watercolor painting of ${basePrompt}, with soft edges and liquid paint textures.`;
+        } else if (mode === 'pexar') {
+          effectivePrompt = `A 3D animation style rendering of ${basePrompt}, cinematic lighting, vibrant colors, stylized character design.`;
+        }
+
         finalUrl = await generateImage(
-          prompt, aspectRatio, resolution, imageModel, references
+          effectivePrompt, aspectRatio, resolution, imageModel, references
         );
       }
       
@@ -126,7 +145,6 @@ const App: React.FC = () => {
       setApiUsage(recordUsage(currentModel, true));
 
     } catch (err: any) {
-      // Re-prompt for key selection if "entity was not found" error occurs
       if (err.message?.includes("Requested entity was not found") && window.aistudio) {
         await window.aistudio.openSelectKey();
       }
@@ -154,7 +172,7 @@ const App: React.FC = () => {
       setIsLoading(false);
       setVideoStatus(null);
     }
-  }, [prompt, refImage1, refImage2, refImage3, aspectRatio, resolution, mode, imageModel, t, refreshHistory]);
+  }, [prompt, refImage1, refImage2, refImage3, aspectRatio, resolution, mode, imageModel, t, refreshHistory, lineThickness, shadingIntensity, paperTexture, bookTheme]);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans">
@@ -169,7 +187,7 @@ const App: React.FC = () => {
           <div className="flex items-center gap-3">
              <div className="hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-800 rounded-xl border border-white/5">
                 <BarChart2 size={14} className="text-emerald-400" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Istoric: {history.length}/40</span>
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">History: {history.length}/40</span>
              </div>
              <button onClick={handleApiKeyFix} className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-bold transition-all bg-slate-800 border border-white/10"><Key size={14} /><span className="hidden sm:inline">{t.apiKeyBtn}</span></button>
           </div>
@@ -192,6 +210,10 @@ const App: React.FC = () => {
             onReferenceImageSelect={onReferenceImageSelect} 
             onClearReferenceImage={(slot) => slot === 1 ? setRefImage1(null) : slot === 2 ? setRefImage2(null) : setRefImage3(null)} 
             mode={mode} setMode={setMode}
+            // Pencil Sketch Props
+            lineThickness={lineThickness} setLineThickness={setLineThickness}
+            shadingIntensity={shadingIntensity} setShadingIntensity={setShadingIntensity}
+            paperTexture={paperTexture} setPaperTexture={setPaperTexture}
           />
           <button onClick={handleGenerate} disabled={isLoading} className={`w-full py-5 rounded-[2rem] font-black text-sm tracking-widest uppercase shadow-2xl transition-all active:scale-95 flex flex-col items-center justify-center gap-1 ${isLoading ? 'bg-slate-800' : 'bg-indigo-600 hover:bg-indigo-500 shadow-indigo-600/20'}`}>
             <div className="flex items-center gap-3">

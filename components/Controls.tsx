@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { Upload, X, Image as ImageIcon, Eraser, Palette, Scissors, Pencil, Cpu, Sparkles, Droplets, Video, Book } from 'lucide-react';
+import { Upload, X, Palette, Eraser, Scissors, Pencil, Sparkles, Droplets, Video, Book } from 'lucide-react';
 import { AspectRatio, ArtStyle, ImageResolution, AppMode, ImageModel, BookTheme } from '../types';
 import { translations } from '../translations';
 
@@ -27,12 +27,20 @@ interface ControlsProps {
   onClearReferenceImage: (slot: 1 | 2 | 3) => void;
   mode: AppMode;
   setMode: (mode: AppMode) => void;
+  // Pencil Sketch Params
+  lineThickness?: number;
+  setLineThickness?: (val: number) => void;
+  shadingIntensity?: number;
+  setShadingIntensity?: (val: number) => void;
+  paperTexture?: string;
+  setPaperTexture?: (val: string) => void;
 }
 
 export const Controls: React.FC<ControlsProps> = ({
   t, prompt, setPrompt, style, setStyle, bookTheme, setBookTheme, aspectRatio, setAspectRatio, resolution, setResolution,
   imageModel, setImageModel, isGenerating, referenceImage1Preview, referenceImage2Preview, referenceImage3Preview,
-  onReferenceImageSelect, onClearReferenceImage, mode, setMode
+  onReferenceImageSelect, onClearReferenceImage, mode, setMode,
+  lineThickness = 5, setLineThickness, shadingIntensity = 5, setShadingIntensity, paperTexture = 'Grained', setPaperTexture
 }) => {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, slot: 1 | 2 | 3) => {
     if (e.target.files && e.target.files[0]) onReferenceImageSelect(e.target.files[0], slot);
@@ -68,7 +76,7 @@ export const Controls: React.FC<ControlsProps> = ({
       <div className="p-4 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl space-y-3">
         <div className="flex items-center gap-2 text-indigo-400">
           <Book size={16} />
-          <label className="text-[10px] font-black uppercase tracking-widest">Temă Ilustrație Carte</label>
+          <label className="text-[10px] font-black uppercase tracking-widest">Book Illustration Theme</label>
         </div>
         <select value={bookTheme} onChange={(e) => setBookTheme(e.target.value as BookTheme)} className="w-full bg-slate-900 border border-white/5 rounded-xl px-3 py-2 text-xs text-white outline-none focus:ring-1 focus:ring-indigo-500">
           {Object.values(BookTheme).map(t => <option key={t} value={t}>{t}</option>)}
@@ -85,6 +93,53 @@ export const Controls: React.FC<ControlsProps> = ({
         <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Water</button>
         <button onClick={() => setMode('pexar')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pexar' ? 'bg-purple-900/40 text-purple-300 border-purple-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Sparkles size={14} className="mb-1" /> Pexar</button>
       </div>
+
+      {mode === 'pencil-sketch' && (
+        <div className="p-4 bg-slate-900 rounded-2xl border border-white/5 space-y-4 animate-in slide-in-from-top-2">
+          <div className="flex items-center gap-2 text-slate-400 mb-1">
+            <Pencil size={14} />
+            <span className="text-[10px] font-black uppercase tracking-widest">Pencil Sketch Settings</span>
+          </div>
+          
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              <span>Line Thickness</span>
+              <span>{lineThickness}</span>
+            </div>
+            <input 
+              type="range" min="1" max="10" value={lineThickness} 
+              onChange={(e) => setLineThickness?.(parseInt(e.target.value))} 
+              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <div className="flex justify-between text-[9px] font-bold text-slate-500 uppercase tracking-wider">
+              <span>Shading Intensity</span>
+              <span>{shadingIntensity}</span>
+            </div>
+            <input 
+              type="range" min="1" max="10" value={shadingIntensity} 
+              onChange={(e) => setShadingIntensity?.(parseInt(e.target.value))} 
+              className="w-full h-1 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+            />
+          </div>
+
+          <div className="space-y-1">
+            <label className="block text-[9px] font-bold text-slate-500 uppercase tracking-wider">Paper Texture</label>
+            <select 
+              value={paperTexture} 
+              onChange={(e) => setPaperTexture?.(e.target.value)} 
+              className="w-full bg-slate-950 border border-white/10 rounded-lg px-2 py-1.5 text-[10px] text-white outline-none"
+            >
+              <option value="Smooth">Smooth Paper</option>
+              <option value="Grained">Grained Paper</option>
+              <option value="Rough">Rough Artist Paper</option>
+              <option value="Ancient">Ancient Parchment</option>
+            </select>
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-2">
         {renderImageUpload(1, referenceImage1Preview, "Face REF", "Base")}

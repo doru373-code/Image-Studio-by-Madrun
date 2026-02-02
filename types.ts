@@ -44,7 +44,7 @@ export type ImageResolution = "1K" | "2K" | "4K" | "720p" | "1080p";
 
 export type AppMode = 'generate' | 'erase' | 'remove-bg' | 'pencil-sketch' | 'watercolor' | 'pexar' | 'video-clone';
 
-export type Language = 'en' | 'fr' | 'ro';
+export type Language = 'en' | 'fr';
 
 export interface ApiUsage {
   totalRequests: number;

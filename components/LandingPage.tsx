@@ -6,7 +6,7 @@ import { translations } from '../translations';
 interface LandingPageProps {
   t: typeof translations.en;
   onProceed: () => void;
-  onLangChange: (lang: 'en' | 'fr' | 'ro') => void;
+  onLangChange: (lang: 'en' | 'fr') => void;
   currentLang: string;
 }
 
@@ -25,7 +25,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({ t, onProceed, onLangCh
 
           <div className="flex items-center gap-6">
             <div className="hidden sm:flex items-center gap-2 bg-slate-900/80 p-1 rounded-full border border-white/5">
-              {(['en', 'fr', 'ro'] as const).map((l) => (
+              {(['en', 'fr'] as const).map((l) => (
                 <button 
                   key={l} 
                   onClick={() => onLangChange(l)} 
