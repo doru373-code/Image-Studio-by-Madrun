@@ -148,8 +148,8 @@ export const LandingPage: React.FC<LandingPageProps> = ({ t, onProceed, onLangCh
                     <div className="w-12 h-12 rounded-full bg-slate-800 flex items-center justify-center border border-white/10 -ml-6"><Zap size={20} /></div>
                   </div>
                   <div className="space-y-4">
-                    <h3 className="text-3xl font-black tracking-tight">Character Cloning</h3>
-                    <p className="text-slate-400">Keep your characters consistent across multiple images and video generations with our training-free cloning tech.</p>
+                    <h3 className="text-3xl font-black tracking-tight">AI Video Creation</h3>
+                    <p className="text-slate-400">Transform your creative visions into high-definition AI videos with consistent quality and cinematic transitions.</p>
                   </div>
                </div>
             </div>

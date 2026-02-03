@@ -113,7 +113,8 @@ const App: React.FC = () => {
           const shadeDesc = shadingIntensity > 7 ? 'heavy and dramatic shading' : shadingIntensity < 4 ? 'light and soft shading' : 'balanced realistic shading';
           effectivePrompt = `A high-quality graphite pencil sketch of ${basePrompt}. Features ${thickDesc}, ${shadeDesc}, and is drawn on ${paperTexture.toLowerCase()} paper texture. Professional hand-drawn look, detailed cross-hatching.`;
         } else if (mode === 'watercolor') {
-          effectivePrompt = `A beautiful vibrant watercolor painting of ${basePrompt}, with soft edges and liquid paint textures.`;
+          // Changed from Watercolor to Gouache logic
+          effectivePrompt = `A beautiful vibrant gouache painting of ${basePrompt}, with rich opaque colors, smooth matte textures, and visible painterly strokes. Highly detailed illustration.`;
         } else if (mode === 'pexar') {
           effectivePrompt = `A 3D animation style rendering of ${basePrompt}, cinematic lighting, vibrant colors, stylized character design.`;
         }

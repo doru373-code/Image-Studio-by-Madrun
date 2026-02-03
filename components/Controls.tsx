@@ -70,7 +70,7 @@ export const Controls: React.FC<ControlsProps> = ({
     <div className="space-y-6">
       <div className="flex flex-wrap gap-2 p-1.5 bg-slate-900 rounded-2xl border border-white/5 shadow-inner">
         <button onClick={() => setMode('generate')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'generate' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Palette size={14} className="mr-2" /> CREATE</button>
-        <button onClick={() => setMode('video-clone')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'video-clone' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Video size={14} className="mr-2" /> VIDEO CLONE</button>
+        <button onClick={() => setMode('video-clone')} className={`flex-1 flex items-center justify-center py-2.5 px-2 text-[10px] font-bold rounded-xl transition-all ${mode === 'video-clone' ? 'bg-indigo-600 text-white' : 'text-slate-500 hover:text-slate-300'}`}><Video size={14} className="mr-2" /> {t.modeVideo.toUpperCase()}</button>
       </div>
 
       <div className="p-4 bg-indigo-950/30 border border-indigo-500/20 rounded-2xl space-y-3">
@@ -90,7 +90,7 @@ export const Controls: React.FC<ControlsProps> = ({
 
       <div className="grid grid-cols-3 gap-2">
         <button onClick={() => setMode('pencil-sketch')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pencil-sketch' ? 'bg-slate-700 text-white border-slate-500' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Pencil size={14} className="mb-1" /> Sketch</button>
-        <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Water</button>
+        <button onClick={() => setMode('watercolor')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'watercolor' ? 'bg-indigo-900/40 text-indigo-300 border-indigo-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Droplets size={14} className="mb-1" /> Gouache</button>
         <button onClick={() => setMode('pexar')} className={`flex flex-col items-center justify-center py-2 px-1 rounded-xl border transition-all text-[9px] font-black uppercase tracking-tighter ${mode === 'pexar' ? 'bg-purple-900/40 text-purple-300 border-purple-500/30' : 'bg-slate-900 text-slate-500 border-white/5'}`}><Sparkles size={14} className="mb-1" /> Pexar</button>
       </div>
 
