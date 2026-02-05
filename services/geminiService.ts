@@ -5,6 +5,18 @@ import { AspectRatio, ImageResolution, ImageModel } from "../types";
 const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 2000;
 
+const getApiKey = () => {
+  // First priority: Injected via server.js from Hostinger Env
+  const injectedKey = (window as any).process?.env?.API_KEY;
+  if (injectedKey && injectedKey.length > 5) return injectedKey;
+  
+  // Second priority: Process env (Vite/Node default)
+  const envKey = process.env.API_KEY;
+  if (envKey && envKey.length > 5) return envKey;
+
+  return null;
+};
+
 async function wait(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
@@ -17,7 +29,7 @@ async function withRetry<T>(fn: () => Promise<T>, retries = MAX_RETRIES, delay =
     const isRetryable = status === 503 || status === 429;
     
     if (isRetryable && retries > 0) {
-      console.warn(`Model overloaded (${status}). Retrying in ${delay}ms... (${retries} retries left)`);
+      console.warn(`Model overloaded (${status}). Retrying in ${delay}ms...`);
       await wait(delay);
       return withRetry(fn, retries - 1, delay * 2);
     }
@@ -30,10 +42,9 @@ export const generateVideo = async (
   referenceImages: { data: string; mimeType: string }[] = [],
   onStatusUpdate?: (status: string) => void
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) throw new Error("API Key not configured.");
+  const apiKey = getApiKey();
+  if (!apiKey) throw new Error("API Key missing. Please set API_KEY in Hostinger Environment Variables.");
   
-  // Re-create instance right before calling as per guidelines
   const ai = new GoogleGenAI({ apiKey });
   
   const referenceImagesPayload: any[] = referenceImages.map(img => ({
@@ -44,9 +55,8 @@ export const generateVideo = async (
     referenceType: VideoGenerationReferenceType.ASSET,
   }));
 
-  onStatusUpdate?.("Inițializare operațiune video...");
+  onStatusUpdate?.("Initializing video generation...");
   
-  // Wrapped in withRetry and correctly passing referenceImages to config
   let operation = await withRetry(async () => {
     return await ai.models.generateVideos({
       model: 'veo-3.1-generate-preview',
@@ -61,14 +71,13 @@ export const generateVideo = async (
   });
 
   while (!operation.done) {
-    onStatusUpdate?.("AI-ul generează cadrele video...");
+    onStatusUpdate?.("AI is processing video frames...");
     await wait(10000);
-    // Poll operation status correctly
     operation = await ai.operations.getVideosOperation({ operation: operation });
   }
 
   const downloadLink = operation.response?.generatedVideos?.[0]?.video?.uri;
-  if (!downloadLink) throw new Error("Eroare la obținerea link-ului video.");
+  if (!downloadLink) throw new Error("Failed to retrieve video download link.");
 
   const fetchResponse = await fetch(`${downloadLink}&key=${apiKey}`);
   const blob = await fetchResponse.blob();
@@ -82,16 +91,14 @@ export const generateImage = async (
   model: ImageModel,
   referenceImages: { data: string; mimeType: string }[] = []
 ): Promise<string> => {
-  const apiKey = process.env.API_KEY;
+  const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("Cheia API nu este configurată.");
+    throw new Error("API Key missing. Please set API_KEY in Hostinger Environment Variables.");
   }
   
-  // Create instance right before call
   const ai = new GoogleGenAI({ apiKey });
   const parts: any[] = [];
   
-  // Nano banana series: use parts for image references
   if (referenceImages.length > 0) {
     referenceImages.forEach((img) => {
       parts.push({
@@ -136,15 +143,14 @@ export const generateImage = async (
     });
 
     if (!response || !response.candidates || response.candidates.length === 0) {
-      throw new Error("Nu am primit un răspuns de la AI.");
+      throw new Error("No response received from AI model.");
     }
 
     const candidate = response.candidates[0];
     if (candidate.finishReason === 'SAFETY') {
-      throw new Error("Conținut blocat de filtrele de siguranță.");
+      throw new Error("Content blocked by safety filters.");
     }
 
-    // Nano banana models: iterate parts to find inlineData
     for (const part of candidate.content.parts) {
       if (part.inlineData && part.inlineData.data) {
         const mimeType = part.inlineData.mimeType || 'image/png';
@@ -152,6 +158,6 @@ export const generateImage = async (
       }
     }
 
-    throw new Error("Imaginea nu a fost returnată corespunzător.");
+    throw new Error("Image data not found in model response.");
   });
 };
