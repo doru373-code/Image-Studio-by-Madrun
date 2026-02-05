@@ -10,41 +10,46 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Path to the built files
 const distPath = path.join(__dirname, 'dist');
 
 const serveIndex = (req, res) => {
   const indexPath = path.join(distPath, 'index.html');
   
   if (!fs.existsSync(indexPath)) {
-    return res.status(404).send('Build folder not found. Did you run "npm run build"?');
+    console.error('CRITICAL: dist/index.html not found. Please run "npm run build" in the Hostinger console.');
+    return res.status(404).send('Application not built. Please run "npm run build" in your Hostinger dashboard terminal.');
   }
 
   fs.readFile(indexPath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).send('Error loading index.html');
+      console.error('Error reading index.html:', err);
+      return res.status(500).send('Server Error: Failed to load application.');
     }
     
+    // Use the API_KEY from Hostinger's environment variables
     const apiKey = process.env.API_KEY || '';
     
-    // Replace the placeholder script for runtime key injection on Hostinger
-    const injectedData = data.replace(
-      /window\.process\s*=\s*\{env\s*:\s*\{API_KEY\s*:\s*""\}\}/g,
-      `window.process={env:{API_KEY:"${apiKey}"}}`
-    );
+    // Direct token replacement is the most reliable method for Hostinger deployments
+    const injectedData = data.replace('__GEMINI_API_KEY__', apiKey);
     
     res.send(injectedData);
   });
 };
 
+// Route for the root path
 app.get('/', serveIndex);
+
+// Serve all static assets (JS, CSS, images) from the dist folder
 app.use(express.static(distPath, { index: false }));
+
+// Fallback for SPA routing (fixes "blank page" on refresh)
 app.get('*', serveIndex);
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 Hostinger Server active on port ${PORT}`);
-  if (process.env.API_KEY) {
-    console.log(`✅ API_KEY found in environment (starts with: ${process.env.API_KEY.substring(0, 4)}...)`);
-  } else {
-    console.error(`❌ API_KEY NOT FOUND in Hostinger environment variables!`);
-  }
+  console.log(`\n-----------------------------------------`);
+  console.log(`🚀 Image Studio Production Server`);
+  console.log(`📍 Port: ${PORT}`);
+  console.log(`🔑 API Key Configured: ${process.env.API_KEY ? 'YES' : 'NO (Check Hpanel Environment Variables)'}`);
+  console.log(`-----------------------------------------\n`);
 });

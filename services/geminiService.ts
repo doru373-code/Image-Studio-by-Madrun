@@ -6,13 +6,23 @@ const MAX_RETRIES = 3;
 const INITIAL_RETRY_DELAY = 2000;
 
 const getApiKey = () => {
-  // First priority: Injected via server.js from Hostinger Env
-  const injectedKey = (window as any).process?.env?.API_KEY;
-  if (injectedKey && injectedKey.length > 5) return injectedKey;
+  // 1. Check for token injected by Hostinger server.js
+  const injectedKey = (window as any).ENV_API_KEY;
+  if (injectedKey && injectedKey !== "__GEMINI_API_KEY__" && injectedKey.length > 5) {
+    return injectedKey;
+  }
   
-  // Second priority: Process env (Vite/Node default)
+  // 2. Check for process.env (Vercel / Local Vite)
   const envKey = process.env.API_KEY;
-  if (envKey && envKey.length > 5) return envKey;
+  if (envKey && envKey.length > 5) {
+    return envKey;
+  }
+
+  // 3. Last resort: specific environment mock (from index.html script tag)
+  const mockKey = (window as any).process?.env?.API_KEY;
+  if (mockKey && mockKey.length > 5) {
+    return mockKey;
+  }
 
   return null;
 };
@@ -43,7 +53,7 @@ export const generateVideo = async (
   onStatusUpdate?: (status: string) => void
 ): Promise<string> => {
   const apiKey = getApiKey();
-  if (!apiKey) throw new Error("API Key missing. Please set API_KEY in Hostinger Environment Variables.");
+  if (!apiKey) throw new Error("API Key missing. Please set API_KEY in your Hostinger or Vercel Environment Variables.");
   
   const ai = new GoogleGenAI({ apiKey });
   
@@ -93,7 +103,7 @@ export const generateImage = async (
 ): Promise<string> => {
   const apiKey = getApiKey();
   if (!apiKey) {
-    throw new Error("API Key missing. Please set API_KEY in Hostinger Environment Variables.");
+    throw new Error("API Key missing. Please set API_KEY in your Hostinger or Vercel Environment Variables.");
   }
   
   const ai = new GoogleGenAI({ apiKey });
