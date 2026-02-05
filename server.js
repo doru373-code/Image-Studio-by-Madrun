@@ -10,26 +10,23 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Path to the built files
 const distPath = path.join(__dirname, 'dist');
 
 const serveIndex = (req, res) => {
   const indexPath = path.join(distPath, 'index.html');
   
   if (!fs.existsSync(indexPath)) {
-    return res.status(404).send('Build folder not found. Please run "npm run build" in Hostinger terminal.');
+    return res.status(404).send('Build folder not found. Did you run "npm run build"?');
   }
 
   fs.readFile(indexPath, 'utf8', (err, data) => {
     if (err) {
-      return res.status(500).send('Error loading application.');
+      return res.status(500).send('Error loading index.html');
     }
     
-    // Use Regex to find the API_KEY injection point. 
-    // This is more robust than exact string matching if Vite minifies the HTML.
     const apiKey = process.env.API_KEY || '';
     
-    // This regex looks for the window.process mock and replaces the empty string with the real key
+    // Replace the placeholder script for runtime key injection on Hostinger
     const injectedData = data.replace(
       /window\.process\s*=\s*\{env\s*:\s*\{API_KEY\s*:\s*""\}\}/g,
       `window.process={env:{API_KEY:"${apiKey}"}}`
@@ -44,6 +41,10 @@ app.use(express.static(distPath, { index: false }));
 app.get('*', serveIndex);
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`\n🚀 Server running on port ${PORT}`);
-  console.log(`🔑 Hostinger API_KEY Detection: ${process.env.API_KEY ? 'SUCCESS' : 'FAILED (Check Environment Variables in Hpanel)'}`);
+  console.log(`🚀 Hostinger Server active on port ${PORT}`);
+  if (process.env.API_KEY) {
+    console.log(`✅ API_KEY found in environment (starts with: ${process.env.API_KEY.substring(0, 4)}...)`);
+  } else {
+    console.error(`❌ API_KEY NOT FOUND in Hostinger environment variables!`);
+  }
 });
